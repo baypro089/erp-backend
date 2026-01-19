@@ -42,34 +42,34 @@ services:
     networks:
       - erp_network
 
-  # 4. Backend API (NestJS)
-  # Lưu ý: Service này sẽ build từ source code trong folder erp-backend
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: erp_backend_api
-    restart: always
-    ports:
-      - "${PORT}:3000"
-    environment:
-      - DB_HOST=postgres # Tên service trong network docker
-      - DB_PORT=5432
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - erp_network
-    # Chạy chế độ dev (hot-reload)
-    command: npm run start:dev
+  # # 4. Backend API (NestJS)
+  # # Lưu ý: Service này sẽ build từ source code trong folder erp-backend
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: erp_backend_api
+  #   ports:
+  #     - "${PORT}:3000"
+  #   environment:
+  #     - DB_HOST=postgres # Tên service trong network docker
+  #     - DB_PORT=5432
+  #     - DB_USERNAME=${DB_USERNAME}
+  #     - DB_PASSWORD=${DB_PASSWORD}
+  #     - DB_NAME=${DB_NAME}
+  #     - TYPEORM_SYNC=${TYPEORM_SYNC}
+  #     - REDIS_HOST=redis
+  #     - REDIS_PORT=6379
+  #   volumes:
+  #     - .:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - erp_network
+  #   # Chạy chế độ dev (hot-reload)
+  #   command: npm run start
 
 volumes:
   postgres_data:

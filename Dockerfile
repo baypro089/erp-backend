@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 3000
 
 # Lệnh chạy mặc định (sẽ bị ghi đè bởi command trong docker-compose nếu có)
-CMD ["npm", "run", "start:dev"]
+CMD ["npm", "run", "start"]
