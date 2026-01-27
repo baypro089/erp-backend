@@ -4,13 +4,15 @@ import { RoleRepository } from "@/repositories/role.repository";
 import { Role } from "@/entities/role.entity";
 import { CreateRoleDTO, UpdateRoleDTO } from "@/dtos/roles.dtos";
 import { PermissionRepository } from "@/repositories/permission.repository";
+import { PermissionResponse } from "@libs/shared/types/permissions.type";
+import { Permission } from "@/entities/permission.entity";
 
 @Injectable()
 export class RoleService {
     // Implement role-related business logic here
     constructor(
         private readonly roleRepository: RoleRepository,
-        private readonly permissionRepository: PermissionRepository
+        private readonly permissionRepository: PermissionRepository,
     ) { }
 
     async getRolesByCondition(roleCode?: string, roleName?: string): Promise<Role[]> {
@@ -45,22 +47,22 @@ export class RoleService {
         });
     }
 
-    async updateRole(updateRoleDto: UpdateRoleDTO): Promise<Role> {
-        const role = await this.roleRepository.findByCode(updateRoleDto.roleCode);
+    async updateRole(id: string, updateRoleDto: UpdateRoleDTO): Promise<Role | null> {
+        const role = await this.roleRepository.findByCode(id);
         if (!role) {
             throw new Error('Role not found!');
         }
 
         let permissions = role.permissions;
-        if (updateRoleDto.permissionCodes && updateRoleDto.permissionCodes.length > 0) {
+        if (updateRoleDto.permissionCodes) {
             permissions = await this.permissionRepository.findByCodes(updateRoleDto.permissionCodes);
             if (!permissions || permissions.length === 0) {
                 throw new Error('No valid permissions found to assign to the role.');
             }
         }
 
-        return await this.roleRepository.handleUpdate({
-            role_code: updateRoleDto.roleCode,
+        return await this.roleRepository.handleUpdate( {
+            role_code: id,
             role_name: updateRoleDto.roleName ?? role.role_name,
             permissions: permissions,
         });
@@ -72,7 +74,6 @@ export class RoleService {
             throw new Error(`Roles not found!`);
         }
         for (const role of roles) {
-
             if (role.users && role.users.length > 0) {
                 throw new Error(`Cannot delete role ${role.role_code} as it is assigned to users.`);
             }
@@ -80,4 +81,8 @@ export class RoleService {
         }
     }
 
+    async getAllPermissions(): Promise<Permission[]> {
+        const permissions = await this.permissionRepository.getAllPermissions();
+        return permissions;
+    }
 }

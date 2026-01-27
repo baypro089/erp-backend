@@ -1,9 +1,12 @@
 import { PagedResponse } from '@libs/core/interfaces/apiResponse.interface';
+import { PagedResult } from './pagedResult.type';
+import { EmployeeResponse } from './employees.type';
+import { PositionResponse } from './positions.type';
 
 export type JobHistoryResponse = {
   id: string;
-  employeeId: string;
-  positionId: string;
+  employee: EmployeeResponse;
+  position: PositionResponse;
   startDate: Date;
   endDate: Date | null;
   salaryAtTime: number;
@@ -17,4 +20,4 @@ export type JobHistoryResponseList = {
   total: number;
 };
 
-export type PagedAndFilteredJobHistory = PagedResponse<JobHistoryResponse>;
+export type PagedAndFilteredJobHistory = PagedResult<JobHistoryResponse>;

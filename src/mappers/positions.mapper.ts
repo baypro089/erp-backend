@@ -6,9 +6,11 @@ export class PositionsMapper {
     return {
       id: position.id,
       name: position.name,
+      description: position.description,
       baseSalary: Number(position.baseSalary),
       createdAt: position.createdAt,
       updatedAt: position.updatedAt,
+      isDeleted: position.isDeleted,
     };
   }
 

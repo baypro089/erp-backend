@@ -41,7 +41,7 @@ export class Product {
   @Column({ type: 'varchar', length: 50, name: 'warranty_months' })
   warrantyMonths: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ nullable: true })
   specs: string;
 
   @Column({ type: 'varchar', length: 2083, name: 'image_url', nullable: true })

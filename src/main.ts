@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { ValidationPipe } from '@nestjs/common';
+import { AllExceptionsFilter } from './interceptors/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,7 +20,6 @@ async function bootstrap() {
     .setTitle('ERP-API')
     .setDescription('Tài liệu API chung cho toàn bộ ứng dụng.')
     .setVersion('1.0')
-    .addTag('Permissions', 'Các API liên quan đến quản lý quyền')
     // ✨ THÊM CẤU HÌNH JWT BEARER VÀO ĐÂY ✨
     .addBearerAuth(
       {
@@ -31,9 +32,19 @@ async function bootstrap() {
       'access-token' // <-- ID DUY NHẤT để tham chiếu đến lược đồ bảo mật này.
     )
     .build();
-    
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.listen(process.env.PORT ?? 3000);
 }

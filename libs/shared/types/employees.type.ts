@@ -1,22 +1,59 @@
-import { PagedResponse } from '@libs/core/interfaces/apiResponse.interface';
+import { UserResponse } from './users.type';
+import { DepartmentResponse } from './departments.type';
+import { PositionResponse } from './positions.type';
+import { PagedResult } from './pagedResult.type';
+import { Status } from '../enums/employee-status.enum';
+import { Gender } from '../enums/gender.enum';
+import { Level } from '../enums/level.enum';
+import { Employee } from '@/entities/employee.entity';
 
 export type EmployeeResponse = {
   id: string;
-  userId: string;
+  userId?: string;
   fullName: string;
-  phone: string;
-  address: string;
-  dob: Date | null;
+  gender?: Gender;
+  phone?: string;
+  identityNumber?: string;
+  identityIssuedDate?: Date;
+  identityIssuedPlace?: string;
+  addressPermanent?: string;
+  addressCurrent?: string;
+  nationality?: string;
+  dateOfBirth?: Date;
+  photoUrl?: string;
+  employeeCode: string;
   startDate: Date;
-  departmentId: string;
-  currentPositionId: string;
+  level?: Level;
+  department: DepartmentResponse;
+  currentPosition: PositionResponse;
+  managerId?: string;
   createdAt: Date;
   updatedAt: Date;
+  status: Status;
 };
 
-export type EmployeeResponseList = {
-  items: EmployeeResponse[];
-  total: number;
+export type CreateEmployeeDto = {
+  userId?: string;
+  fullName: string;
+  startDate: Date;
+  employeeCode: string;
+  departmentId: string;
+  currentPositionId: string;
 };
 
-export type PagedAndFilteredEmployee = PagedResponse<EmployeeResponse>;
+export type UpdateEmployeeDto = Partial<EmployeeResponse>;
+
+export type EmployeeTableResponse = {
+  id: string;
+  employeeCode: string;
+  fullName: string;
+  startDate: Date;
+  departmentName: string;
+  positionName: string;
+  createdAt: Date;
+  updatedAt: Date;
+  status: Status;
+};
+
+
+export type PagedAndFilteredEmployee = PagedResult<EmployeeTableResponse>;

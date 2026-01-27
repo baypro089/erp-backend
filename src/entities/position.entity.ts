@@ -4,9 +4,11 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Employee } from './employee.entity';
 
 @Entity({ name: 'positions' })
 export class Position {
@@ -15,6 +17,9 @@ export class Position {
 
   @Column({ type: 'varchar', length: 255, unique: true })
   name: string;
+
+  @Column({nullable: true })
+  description: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, name: 'base_salary' })
   baseSalary: number;
@@ -25,6 +30,12 @@ export class Position {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
+  @Column({ default: false })
+  isDeleted: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
   deletedAt: Date;
+
+  @OneToMany(() => Employee, (employee) => employee.currentPosition)
+  employees: Employee[];
 }

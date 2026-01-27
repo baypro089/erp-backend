@@ -16,29 +16,64 @@ import { Position } from './position.entity';
 import { JobHistory } from './job-history.entity';
 import { LeaveRequest } from './leave-request.entity';
 import { Payslip } from './payslip.entity';
+import { Gender } from '@libs/shared/enums/gender.enum';
+import { Level } from '@libs/shared/enums/level.enum';
+import { Status } from '@libs/shared/enums/employee-status.enum';
 
 @Entity('employees')
 export class Employee {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid', name: 'user_id' })
+  //==== Thông tin cá nhân ====//
+  @Column({ type: 'uuid', name: 'user_id', nullable: true })
   userId: string;
 
   @Column({ length: 200, name: 'full_name' })
   fullName: string;
 
-  @Column({ length: 100 })
+  @Column({ type: 'enum', enum: Gender, nullable: true })
+  gender: Gender;
+
+  @Column({ type: 'varchar', nullable: true })
+  photo: string;
+
+  @Column({ nullable: true, name: 'date_of_birth' })
+  dateOfBirth: Date;
+
+  @Column({ length: 20, name: 'identity_number', nullable: true })
+  identityNumber: string;
+
+  @Column({ name: 'identity_issued_date', nullable: true })
+  identityIssuedDate: Date;
+
+  @Column({ length: 200, name: 'identity_issued_place', nullable: true })
+  identityIssuedPlace: string;
+
+  @Column({ length: 50, nullable: true })
+  nationality: string;
+
+  @Column({ length: 20, nullable: true })
   phone: string;
 
-  @Column()
-  address: string;
+  @Column({ length: 200, name: 'address_permanent', nullable: true })
+  addressPermanent: string;
 
-  @Column({ nullable: true })
-  dob: Date;
+  @Column({ length: 200, name: 'address_current', nullable: true })
+  addressCurrent: string;
+
+  //==== Thông tin công việc ====//
+  @Column({ length: 50, name: 'employee_code', unique: true })
+  employeeCode: string;
 
   @Column({ name: 'start_date' })
   startDate: Date;
+
+  @Column({ type: 'enum', enum: Level, default: Level.JUNIOR })
+  level: Level;
+
+  @Column({ type: 'uuid', name: 'manager_id', nullable: true })
+  managerId: string;
 
   @Column({ type: 'uuid', name: 'department_id' })
   departmentId: string;
@@ -46,14 +81,14 @@ export class Employee {
   @Column({ type: 'uuid', name: 'current_position_id' })
   currentPositionId: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
+  @Column({ type: 'enum', enum: Status, default: Status.DRAFT })
+  status: Status;
 
   @OneToOne(() => User, (user) => user.employee, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
@@ -75,4 +110,11 @@ export class Employee {
 
   @OneToMany(() => Payslip, (payslip) => payslip.employee)
   payslips: Payslip[];
+
+  @ManyToOne(() => Employee)
+  @JoinColumn({ name: 'manager_id' })
+  manager: Employee;
+
+  @OneToMany(() => Employee, (employee) => employee.manager)
+  subordinates: Employee[];
 }

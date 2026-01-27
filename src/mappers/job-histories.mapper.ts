@@ -1,12 +1,14 @@
 import { JobHistory } from '@/entities/job-history.entity';
 import { JobHistoryResponse } from '@libs/shared/types/job-histories.type';
+import { EmployeesMapper } from './employees.mapper';
+import { PositionsMapper } from './positions.mapper';
 
 export class JobHistoriesMapper {
   static toResponse(jobHistory: JobHistory): JobHistoryResponse {
     return {
       id: jobHistory.id,
-      employeeId: jobHistory.employeeId,
-      positionId: jobHistory.positionId,
+      employee: EmployeesMapper.toResponse(jobHistory.employee),
+      position: PositionsMapper.toResponse(jobHistory.position),
       startDate: jobHistory.startDate,
       endDate: jobHistory.endDate,
       salaryAtTime: Number(jobHistory.salaryAtTime),

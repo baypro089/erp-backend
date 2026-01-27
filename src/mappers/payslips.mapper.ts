@@ -1,11 +1,12 @@
 import { Payslip } from '@/entities/payslip.entity';
 import { PayslipResponse } from '@libs/shared/types/payslips.type';
+import { EmployeesMapper } from './employees.mapper';
 
 export class PayslipsMapper {
   static toResponse(payslip: Payslip): PayslipResponse {
     return {
       id: payslip.id,
-      employeeId: payslip.employeeId,
+      employee: EmployeesMapper.toResponse(payslip.employee),
       month: payslip.month,
       year: payslip.year,
       standardWorkDays: Number(payslip.standardWorkDays),

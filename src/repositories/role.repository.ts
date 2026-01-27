@@ -19,7 +19,7 @@ export class RoleRepository extends Repository<Role> {
             query.andWhere('role.role_name ILIKE :role_name', { role_name: `%${roleName}%` });
         }
 
-        query.andWhere('role.is_active = :is_active', { is_active: true });
+        query.andWhere('role.isActive = :is_active', { is_active: true });
 
         return await query.getMany();
     }
@@ -44,8 +44,9 @@ export class RoleRepository extends Repository<Role> {
         return newRole;
     }
 
-    async handleUpdate(role: Partial<Role>): Promise<Role> {
-        return await this.save(role);
+    async handleUpdate(role: Partial<Role>): Promise<Role | null> {
+        await this.save(role);
+        return this.findByCode(role.role_code as string);
     }
 
     async handleDelete(role: Role): Promise<void> {

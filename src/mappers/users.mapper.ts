@@ -12,6 +12,8 @@ export class UsersMapper {
             isActive: entity.isActive,
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt,
+            status: entity.status,
+            lastLogin: entity.lastLogin,
         };
     }
     static toListDTO(entities: User[]): UserResponseList {

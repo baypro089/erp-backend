@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Employee } from './employee.entity';
 import { Role } from './role.entity';
+import { UserStatus } from '@libs/shared/enums/user-status.enum';
 
 @Entity('users')
 export class User {
@@ -15,6 +16,9 @@ export class User {
 
   @Column({ name: 'password_hash' })
   password: string;
+
+  @Column({ name: 'role_code' })
+  roleCode: string;
 
   @ManyToOne(() => Role, (role) => role.users, { onDelete: "RESTRICT" })  
   @JoinColumn({ name: "role_code" })
@@ -32,5 +36,10 @@ export class User {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  
+  @Column({ name: 'last_login', type: 'timestamp', nullable: true })
+  lastLogin: Date | null;
+
+  @Column({type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
+  status: UserStatus;
+
 }

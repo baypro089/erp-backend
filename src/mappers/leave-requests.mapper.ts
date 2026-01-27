@@ -1,11 +1,12 @@
 import { LeaveRequest } from '@/entities/leave-request.entity';
 import { LeaveRequestResponse } from '@libs/shared/types/leave-requests.type';
+import { EmployeesMapper } from './employees.mapper';
 
 export class LeaveRequestsMapper {
   static toResponse(leaveRequest: LeaveRequest): LeaveRequestResponse {
     return {
       id: leaveRequest.id,
-      employeeId: leaveRequest.employeeId,
+      employee: EmployeesMapper.toResponse(leaveRequest.employee),
       startTime: leaveRequest.startTime,
       endTime: leaveRequest.endTime,
       reason: leaveRequest.reason,
