@@ -4,7 +4,6 @@ import { DataSource, In, Repository } from "typeorm";
 
 @Injectable()
 export class PositionRepository extends Repository<Position> {
-    // Define your custom methods for position data access here
     constructor(private dataSource: DataSource) {
         super(Position, dataSource.createEntityManager());
     }

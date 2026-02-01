@@ -15,6 +15,7 @@ type UserResponse = {
     username: string;
     email: string;
     role: RoleResponse;
+    employee?: EmployeeResponse;
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -23,9 +24,8 @@ type UserResponse = {
 }
 
 type UpdateUserDto = {
-    password?: string;
     email?: string;
-    role_code?: string;
+    roleCode?: string;
     status?: UserStatus;
 }
 

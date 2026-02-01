@@ -2,11 +2,11 @@ import { User } from "@/entities/user.entity";
 import { UserStatus } from "@libs/shared/enums/user-status.enum";
 import { PagedResult } from "@libs/shared/types/pagedResult.type";
 import { Injectable } from "@nestjs/common";
+import { InjectDataSource } from "@nestjs/typeorm";
 import { DataSource, Repository, SelectQueryBuilder } from "typeorm";
 
 @Injectable()
 export class UserRepository extends Repository<User> {
-  // Define your custom methods for user data access here
   constructor(private dataSource: DataSource) {
     super(User, dataSource.createEntityManager());
   }
@@ -19,18 +19,17 @@ export class UserRepository extends Repository<User> {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.findOne({ where: { email, isActive: true }, relations: ['role'] });
+    return this.findOne({ where: { email, isActive: true }, relations: ['role', 'employee', 'employee.department', 'employee.currentPosition'] });
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.findOne({ where: { id, isActive: true }, relations: ['role'] });
+    return this.findOne({ where: { id, isActive: true }, relations: ['role', 'employee', 'employee.department', 'employee.currentPosition'] });
   }
 
   async findAllActiveUsers(): Promise<User[]> {
-    return this.find({ where: { isActive: true }, relations: ['role'] });
+    return this.find({ where: { isActive: true }, relations: ['role', 'employee', 'employee.department', 'employee.currentPosition'] });
   }
 
-  /** Lỡ viết rồi nên để trưng thôi */
   async findAllUsersOptional(
     userId?: string,
     username?: string,
@@ -43,10 +42,11 @@ export class UserRepository extends Repository<User> {
     pageSize?: number,
   ): Promise<PagedResult<User>> {
     const query : SelectQueryBuilder<User> = this.createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role',)
+      .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.employee', 'employee')
-      .where('user.employee IS NOT NULL')
-      .andWhere('user.role IS NOT NULL');
+      .leftJoinAndSelect('employee.department', 'department')
+      .leftJoinAndSelect('employee.currentPosition', 'currentPosition')
+      .where('user.isActive = :isActive', { isActive: true });
 
     if (userId) {
       query.andWhere('user.id = :userId', { userId });
@@ -58,20 +58,23 @@ export class UserRepository extends Repository<User> {
       query.andWhere('user.email ILIKE :email', { email: `%${email}%` });
     }
     if (roleId) {
-      query.andWhere('user.role_code = :roleId', { roleId });
+      query.andWhere('user.roleCode = :roleId', { roleId });
     }
     if (employeeName) {
-      query.andWhere('unaccent(employee.employee_name) ILIKE unaccent(:employeeName)', { employeeName: `%${employeeName}%` });
+      query.andWhere('unaccent(employee.fullName) ILIKE unaccent(:employeeName)', { employeeName: `%${employeeName}%` });
     }
     if (createDateFrom) {
-      query.andWhere('DATE(user.created_at) >= :createDateFrom', { createDateFrom });
+      query.andWhere('DATE(user.createdAt) >= :createDateFrom', { createDateFrom });
     }
     if (createDateTo) {
-      query.andWhere('DATE(user.created_at) <= :createDateTo', { createDateTo });
+      query.andWhere('DATE(user.createdAt) <= :createDateTo', { createDateTo });
     }
 
+    // Always order by createdAt
+    query.orderBy('user.createdAt', 'DESC');
+
     if (page && pageSize) {
-      query.orderBy('user.created_at', 'DESC').skip((page - 1) * pageSize).take(pageSize);
+      query.skip((page - 1) * pageSize).take(pageSize);
     }
 
     const [items, totalItems] = await query.getManyAndCount();
@@ -103,6 +106,13 @@ export class UserRepository extends Repository<User> {
     await this.update(id, { isActive: !active });
   }
 
+  async updatePasswordByEmail(email: string, newPassword: string): Promise<void> {
+    await this.createQueryBuilder()
+      .update(User)
+      .set({ password: newPassword })
+      .where('email = :email', { email })
+      .execute();
+  }
 
   async banUser(id: string): Promise<void> {
     await this.update(id, { status: UserStatus.BANNED });

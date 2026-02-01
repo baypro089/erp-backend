@@ -9,7 +9,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Employee } from './employee.entity';
-import { LeaveRequestStatus } from '@libs/shared/enums/leave-request-status.enum';
+import { LeaveRequestStatus, LeaveRequestType } from '@libs/shared/enums/leave-request-status.enum';
+import { User } from './user.entity';
 
 @Entity({ name: 'leave_requests' })
 export class LeaveRequest {
@@ -19,13 +20,16 @@ export class LeaveRequest {
   @Column({ type: 'uuid', name: 'employee_id' })
   employeeId: string;
 
-  @Column({ name: 'start_time' })
-  startTime: Date;
+  @Column({ name: 'start_date' })
+  startDate: Date;
 
-  @Column({ name: 'end_time' })
-  endTime: Date;
+  @Column({ name: 'end_date' })
+  endDate: Date;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'enum', enum: LeaveRequestType, default: LeaveRequestType.ANNUAL })
+  type: LeaveRequestType;
+
+  @Column()
   reason: string;
 
   @Column({
@@ -40,18 +44,15 @@ export class LeaveRequest {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
-
+  
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
-
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
 
   @ManyToOne(() => Employee, (employee) => employee.leaveRequests)
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @ManyToOne(() => Employee)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'approver_id' })
-  approver: Employee;
+  approver: User;
 }

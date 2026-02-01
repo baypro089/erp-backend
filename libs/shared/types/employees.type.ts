@@ -24,8 +24,8 @@ export type EmployeeResponse = {
   employeeCode: string;
   startDate: Date;
   level?: Level;
-  department: DepartmentResponse;
-  currentPosition: PositionResponse;
+  department?: DepartmentResponse;
+  currentPosition?: PositionResponse;
   managerId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -41,15 +41,34 @@ export type CreateEmployeeDto = {
   currentPositionId: string;
 };
 
-export type UpdateEmployeeDto = Partial<EmployeeResponse>;
+export type UpdateEmployeeDto = {
+  userId?: string;
+  fullName: string;
+  gender?: Gender;
+  phone?: string;
+  identityNumber?: string;
+  identityIssuedDate?: Date;
+  identityIssuedPlace?: string;
+  addressPermanent?: string;
+  addressCurrent?: string;
+  nationality?: string;
+  dateOfBirth?: Date;
+  photoUrl?: string;
+  level?: Level;
+  departmentId?: string;
+  currentPositionId?: string;
+  managerId?: string;
+  status?: Status;
+};
+
 
 export type EmployeeTableResponse = {
   id: string;
   employeeCode: string;
   fullName: string;
   startDate: Date;
-  departmentName: string;
-  positionName: string;
+  departmentName?: string;
+  positionName?: string;
   createdAt: Date;
   updatedAt: Date;
   status: Status;

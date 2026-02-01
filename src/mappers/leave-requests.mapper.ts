@@ -7,11 +7,12 @@ export class LeaveRequestsMapper {
     return {
       id: leaveRequest.id,
       employee: EmployeesMapper.toResponse(leaveRequest.employee),
-      startTime: leaveRequest.startTime,
-      endTime: leaveRequest.endTime,
+      startDate: leaveRequest.startDate,
+      endDate: leaveRequest.endDate,
       reason: leaveRequest.reason,
       status: leaveRequest.status,
       approverId: leaveRequest.approverId,
+      type: leaveRequest.type,
       createdAt: leaveRequest.createdAt,
       updatedAt: leaveRequest.updatedAt,
     };

@@ -18,6 +18,10 @@ export class CreateJobHistoryDto {
   @IsNotEmpty()
   positionId: string;
 
+  @IsUUID()
+  @IsNotEmpty()
+  departmentId: string;
+
   @IsDateString()
   @IsNotEmpty()
   startDate: string;
@@ -36,4 +40,24 @@ export class CreateJobHistoryDto {
   note?: string;
 }
 
-export class UpdateJobHistoryDto extends PartialType(CreateJobHistoryDto) {}
+export class UpdateJobHistoryDto {
+  @IsUUID()
+  @IsOptional()
+  positionId?: string;
+  @IsUUID()
+  @IsOptional()
+  departmentId?: string;
+  @IsDateString()
+  @IsOptional()
+  startDate?: string;
+  @IsDateString()
+  @IsOptional()
+  endDate?: string;
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  salaryAtTime?: number;
+  @IsString()
+  @IsOptional()
+  note?: string;
+}

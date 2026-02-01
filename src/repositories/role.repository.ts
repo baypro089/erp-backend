@@ -1,5 +1,6 @@
 import { Role } from "@/entities/role.entity";
 import { Injectable } from "@nestjs/common";
+import { InjectDataSource } from "@nestjs/typeorm";
 import { DataSource, In, Repository } from "typeorm";
 
 @Injectable()
@@ -26,8 +27,8 @@ export class RoleRepository extends Repository<Role> {
 
     async findByCode(roleCode: string): Promise<Role | null> {
         return this.findOne({
-            where: { role_code: roleCode, isActive: true },
-            relations: ['users', 'permissions'],
+            where: { role_code: roleCode },
+            relations: ['permissions'],
         });
     }
 
@@ -35,7 +36,7 @@ export class RoleRepository extends Repository<Role> {
         if (!roleCodes || roleCodes.length === 0) return [];
         return await this.find({
             where: { role_code: In(roleCodes) },
-            relations: ['users', 'permissions'],
+            relations: ['permissions'],
         });
     }
 

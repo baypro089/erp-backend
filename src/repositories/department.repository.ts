@@ -4,8 +4,7 @@ import { DataSource, Repository } from "typeorm";
 
 @Injectable()
 export class DepartmentRepository extends Repository<Department> {
-    // Define your custom methods for department data access here
-    constructor(private dataSource: DataSource) {
+    constructor(private readonly dataSource: DataSource) {
         super(Department, dataSource.createEntityManager());
     }
 
@@ -13,14 +12,14 @@ export class DepartmentRepository extends Repository<Department> {
         name?: string,
         page?: number,
         pageSize?: number,
-    ): Promise<{items: Department[], total: number}> {
+    ): Promise<{ items: Department[], total: number }> {
         const query = this.createQueryBuilder('department')
             .where('department.deletedAt IS NULL');
 
         if (name) {
             query.andWhere('unaccent(department.name) ILIKE unaccent(:name)', { name: `%${name}%` });
         }
-        
+
         if (page && pageSize) {
             query.orderBy('department.createdAt', 'DESC').skip((page - 1) * pageSize).take(pageSize);
         }

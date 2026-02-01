@@ -19,7 +19,6 @@ export class UsersController {
     async getAllUsers(): Promise<ApiResponse<UserResponse[]>> {
         try {
             const users = await this.usersService.getAllUsers();
-            console.log(UsersMapper.toListDTO(users));
             return ResponseHelper.send(UsersMapper.toListDTO(users));
         } catch (error) {
             console.error('Error in getAllUsers:', error);
@@ -124,23 +123,6 @@ export class UsersController {
             return ResponseHelper.send(UsersMapper.toDTO(updatedUser as User));
         } catch (error) {
             console.error('Error in updateUser:', error);
-            throw error;
-        }
-    }
-
-    @Patch('/:id/toggle-active')
-    @ApiOperation({ summary: 'Bật/tắt trạng thái người dùng', description: 'Chuyển đổi trạng thái hoạt động của người dùng' })
-    @ApiParam({ name: 'id', description: 'ID của người dùng', type: String })
-    @SwaggerApiResponse({ status: 200, description: 'Cập nhật trạng thái thành công' })
-    @SwaggerApiResponse({ status: 404, description: 'Không tìm thấy người dùng' })
-    async toggleUserActiveStatus(
-        @Param('id') id: string
-    ): Promise<ApiResponse<{ message: string }>> {
-        try {
-            await this.usersService.toggleUserActiveStatus(id);
-            return ResponseHelper.send({ message: 'User active status toggled successfully' });
-        } catch (error) {
-            console.error('Error in toggleUserActiveStatus:', error);
             throw error;
         }
     }

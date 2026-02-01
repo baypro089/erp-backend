@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Employee } from './employee.entity';
+import { JobHistory } from './job-history.entity';
 
 @Entity({ name: 'positions' })
 export class Position {
@@ -38,4 +39,7 @@ export class Position {
 
   @OneToMany(() => Employee, (employee) => employee.currentPosition)
   employees: Employee[];
+
+  @OneToMany(() => JobHistory, (jobHistory) => jobHistory.position)
+  jobHistories: JobHistory[];
 }

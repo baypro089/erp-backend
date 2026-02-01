@@ -90,15 +90,15 @@ export class Employee {
   @Column({ type: 'enum', enum: Status, default: Status.DRAFT })
   status: Status;
 
-  @OneToOne(() => User, (user) => user.employee, { onDelete: 'CASCADE' })
+  @OneToOne(() => User, (user) => user.employee, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => Department)
+  @ManyToOne(() => Department, (department) => department.employees)
   @JoinColumn({ name: 'department_id' })
   department: Department;
 
-  @ManyToOne(() => Position)
+  @ManyToOne(() => Position, (position) => position.employees)
   @JoinColumn({ name: 'current_position_id' })
   currentPosition: Position;
 
@@ -111,7 +111,7 @@ export class Employee {
   @OneToMany(() => Payslip, (payslip) => payslip.employee)
   payslips: Payslip[];
 
-  @ManyToOne(() => Employee)
+  @ManyToOne(() => Employee, (employee) => employee.subordinates)
   @JoinColumn({ name: 'manager_id' })
   manager: Employee;
 

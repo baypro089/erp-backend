@@ -17,7 +17,6 @@ import { EmployeeController } from '@/controllers/employee.controller';
   imports: [
     TypeOrmModule.forFeature([
       Employee,
-      JobHistory,
       LeaveRequest,
       Payslip,
     ]),

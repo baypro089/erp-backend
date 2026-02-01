@@ -3,11 +3,10 @@ import { Status } from "@libs/shared/enums/employee-status.enum";
 import { EmployeeResponse, PagedAndFilteredEmployee } from "@libs/shared/types/employees.type";
 import { PagedResult } from "@libs/shared/types/pagedResult.type";
 import { Injectable } from "@nestjs/common";
-import { DataSource, In, Repository } from "typeorm";
+import { DataSource, In, IsNull, Repository } from "typeorm";
 
 @Injectable()
 export class EmployeeRepository extends Repository<Employee> {
-    // Define your custom methods for employee data access here
     constructor(private dataSource: DataSource) {
         super(Employee, dataSource.createEntityManager());
     }
@@ -25,9 +24,20 @@ export class EmployeeRepository extends Repository<Employee> {
         pageSize?: number,
     ): Promise<{ items: Employee[], total: number }> {
         const query = this.createQueryBuilder('employee')
-            .leftJoinAndSelect('employee.department', 'department')
-            .leftJoinAndSelect('employee.currentPosition', 'position')
-            .where('employee.status != :inactiveStatus', { inactiveStatus: Status.INACTIVE });
+            .leftJoin('employee.department', 'department')
+            .leftJoin('employee.currentPosition', 'position')
+            .select([
+                'employee.id',
+                'employee.employeeCode',
+                'employee.fullName',
+                'employee.startDate',
+                'employee.createdAt',
+                'employee.updatedAt',
+                'employee.status',
+                'department',  
+                'position', 
+            ])
+            .where('employee.status NOT IN (:...inactiveStatus)', { inactiveStatus: [Status.INACTIVE, Status.TERMINATED] });
 
         if (employeeCode) {
             query.andWhere('employee.employeeCode = :employeeCode', { employeeCode });
@@ -82,8 +92,19 @@ export class EmployeeRepository extends Repository<Employee> {
         pageSize?: number,
     ): Promise<{ items: Employee[], total: number }> {
         const query = this.createQueryBuilder('employee')
-            .leftJoinAndSelect('employee.department', 'department')
-            .leftJoinAndSelect('employee.currentPosition', 'position')
+            .leftJoin('employee.department', 'department')
+            .leftJoin('employee.currentPosition', 'position')
+            .select([
+                'employee.id',
+                'employee.employeeCode',
+                'employee.fullName',
+                'employee.startDate',
+                'employee.createdAt',
+                'employee.updatedAt',
+                'employee.status',
+                'department',  
+                'position', 
+            ])
             .where('employee.status IN (:...deletedStatuses)', { deletedStatuses: [Status.INACTIVE, Status.TERMINATED] });
 
         if (employeeCode) {
@@ -127,7 +148,7 @@ export class EmployeeRepository extends Repository<Employee> {
 
     async findAllEmployees(): Promise<Employee[]> {
         return this.find({
-            where: { status: In([Status.ACTIVE, Status.DRAFT]) },
+            where: { status: In([Status.ACTIVE, Status.DRAFT]), userId: IsNull() },
             relations: ['user', 'department', 'currentPosition'],
         });
     }
@@ -142,7 +163,6 @@ export class EmployeeRepository extends Repository<Employee> {
 
     async createEmployee(employeeData: Partial<Employee>): Promise<Employee> {
         const newEmployee = await this.save(this.create(employeeData));
-        // Load lại với đầy đủ relations
         return this.findById(newEmployee.id) as Promise<Employee>;
     }
 

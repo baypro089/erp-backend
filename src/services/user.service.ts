@@ -9,6 +9,9 @@ import { createHash } from 'crypto';
 import { PagedResult } from '@libs/shared/types/pagedResult.type';
 import { EmployeeRepository } from '@/repositories/employee.repository';
 import { DataSource } from 'typeorm';
+import { MailService } from './mail.service';
+import { Role } from '@/entities/role.entity';
+import { Employee } from '@/entities/employee.entity';
 
 @Injectable()
 export class UsersService {
@@ -18,7 +21,8 @@ export class UsersService {
     private readonly roleRepository: RoleRepository,
     private readonly employeeRepository: EmployeeRepository,
     private readonly dataSource: DataSource, // Inject DataSource
-  ) { }
+    private readonly mailService: MailService,
+  ) {}
 
   async getAllUsers(): Promise<User[]> {
     const cacheKey = 'all_users';
@@ -90,41 +94,42 @@ export class UsersService {
   async createUser(userData: Partial<User>): Promise<User> {
     return await this.dataSource.transaction(async (manager) => {
 
-      const usersRepo = manager.withRepository(this.usersRepository);
-      const roleRepo = manager.withRepository(this.roleRepository);
-      const employeeRepo = manager.withRepository(this.employeeRepository);
+      const usersRepo = manager.getRepository(User);
+      const roleRepo = manager.getRepository(Role);
+      const employeeRepo = manager.getRepository(Employee);
 
-      const hashedPassword = await bcrypt.hash(userData.password as string, 10);
+      const hashedPassword = await bcrypt.hash(userData.password as string, Number(process.env.BCRYPT_SALT_OR_ROUNDS));
 
-      const role = await roleRepo.findByCode(userData.roleCode as string);
+      const role = await roleRepo.findOne({ where: { role_code: userData.roleCode as string } });
       if (!role) {
         throw new Error(`Role not found: ${userData.roleCode}`);
       }
 
-      const employee = await employeeRepo.findByCode(userData.username as string);
+      const employee = await employeeRepo.findOne({ where: { employeeCode: userData.username as string } });
       if (!employee) {
         throw new Error(`Employee not found for username: ${userData.username}. Username must match employee code`);
       }
 
-      const userExists = await usersRepo.findByUsername(userData.username as string);
+      const userExists = await usersRepo.findOne({ where: { username: userData.username as string } });
       if (userExists) {
         throw new Error(`User with username ${userData.username} already exists`);
       }
 
-      const emailExists = await usersRepo.findByEmail(userData.email as string);
+      const emailExists = await usersRepo.findOne({ where: { email: userData.email as string } });
       if (emailExists) {
         throw new Error(`User with email ${userData.email} already exists`);
       }
 
-      const newUser = await usersRepo.createUser({
+      const newUser = await usersRepo.save(usersRepo.create({
         ...userData,
         password: hashedPassword,
         role: role,
-      });
+      }));
 
       if (newUser) {
-        await employeeRepo.updateEmployee(employee.id, { user: newUser });
-
+        await employeeRepo.update(employee.id, { user: newUser });
+        // Send welcome email
+        await this.mailService.sendWelcomeEmail(newUser.email, newUser.username, employee.fullName);
       }
 
       await this.redisService.delByPrefix('users:'); // Invalidate related caches
@@ -139,12 +144,19 @@ export class UsersService {
   async updateUser(id: string, userData: Partial<User>): Promise<User | null> {
     const updateData: Partial<User> = { ...userData };
     if (userData.password) {
-      updateData.password = await bcrypt.hash(userData.password, 10);
+      throw new Error('Use updatePasswordByEmail to update password');
     }
     const updatedUser = await this.usersRepository.updateUser(id, updateData);
     await this.redisService.delByPrefix('users:'); // Invalidate related caches
     await this.redisService.del('all_users'); // Invalidate all users cache
     return updatedUser;
+  }
+
+  async updatePasswordByEmail(email: string, newPassword: string): Promise<void> {
+    const hashedPassword = await bcrypt.hash(newPassword, Number(process.env.BCRYPT_SALT_OR_ROUNDS));
+    await this.usersRepository.updatePasswordByEmail(email, hashedPassword);
+    await this.redisService.delByPrefix('users:'); // Invalidate related caches
+    await this.redisService.del('all_users'); // Invalidate all users cache
   }
 
   async toggleUserActiveStatus(id: string): Promise<void> {
@@ -155,6 +167,11 @@ export class UsersService {
 
   async banUser(userId: string): Promise<void> {
     await this.usersRepository.banUser(userId);
-    await this.redisService.del(`session:${userId}`); // Invalidate user session cache
+    
+    // Revoke refresh token to prevent token refresh
+    await this.redisService.del(`refresh_token:${userId}`);
+    
+    // Blacklist user to block all requests immediately (even with valid access token)
+    await this.redisService.set(`banned:${userId}`, 'true', 86400); // 24 hours
   }
 }

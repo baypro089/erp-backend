@@ -10,6 +10,8 @@ import { RedisModule } from './modules/redis.module';
 import { FileModule } from './modules/file.module';
 import { DepartmentsModule } from './modules/departments.module';
 import { PositionsModule } from './modules/positions.module';
+import { JobHistoryModule } from './modules/job-history.module';
+import { LeaveRequestModule } from './modules/leave-request.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { PositionsModule } from './modules/positions.module';
     FileModule,
     DepartmentsModule,
     PositionsModule,
+    JobHistoryModule,
+    LeaveRequestModule,
 
     ConfigModule.forRoot({
       isGlobal: true, 

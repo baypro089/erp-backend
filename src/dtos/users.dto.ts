@@ -32,7 +32,7 @@ export class CreateUserDto {
     description: 'Mã vai trò của người dùng' 
   })
   @IsNotEmpty({ message: 'Vai trò không được để trống' })
-  roleCode?: string;
+  roleCode: string;
 
   @ApiProperty({ 
     example: 'ACTIVE', 
@@ -48,18 +48,10 @@ export class CreateUserDto {
 export class UpdateUserDto {
 
   @ApiProperty({ 
-    example: 'NewPassword@123', 
-    description: 'Mật khẩu mới (tối thiểu 6 ký tự)' 
-  })
-  @MinLength(6, { message: 'Mật khẩu phải từ 6 ký tự trở lên' })
-  @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
-  password: string;
-
-  @ApiProperty({ 
     example: 'newemail@example.com', 
     description: 'Địa chỉ email mới' 
   })
-  @IsNotEmpty({ message: 'Email không được để trống' })
+  @IsOptional()
   @IsEmail({}, { message: 'Email không hợp lệ' })
   email: string;
   
@@ -67,7 +59,7 @@ export class UpdateUserDto {
     example: 'USER', 
     description: 'Mã vai trò mới' 
   })
-  @IsNotEmpty({ message: 'Vai trò không được để trống' })
+  @IsOptional()
   roleCode?: string;
 
   @ApiProperty({ 

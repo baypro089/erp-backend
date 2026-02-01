@@ -7,7 +7,7 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { LeaveRequestStatus } from '@libs/shared/enums/leave-request-status.enum';
+import { LeaveRequestStatus, LeaveRequestType } from '@libs/shared/enums/leave-request-status.enum';
 
 export class CreateLeaveRequestDto {
   @IsUUID()
@@ -16,23 +16,17 @@ export class CreateLeaveRequestDto {
 
   @IsDateString()
   @IsNotEmpty()
-  startTime: string;
+  startDate: Date;
 
   @IsDateString()
   @IsNotEmpty()
-  endTime: string;
+  endDate: Date;
+
+  @IsEnum(LeaveRequestType)
+  @IsNotEmpty()
+  type: LeaveRequestType;
 
   @IsString()
   @IsNotEmpty()
   reason: string;
-}
-
-export class UpdateLeaveRequestDto extends PartialType(CreateLeaveRequestDto) {
-  @IsEnum(LeaveRequestStatus)
-  @IsOptional()
-  status?: LeaveRequestStatus;
-
-  @IsUUID()
-  @IsOptional()
-  approverId?: string;
 }
