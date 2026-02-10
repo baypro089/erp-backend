@@ -33,7 +33,4 @@ export class Role {
 
     @UpdateDateColumn({ type: 'timestamp' })
     updatedAt: Date;
-
-    @Column({ default: false })
-    AdminSiteAccess: boolean;
 }

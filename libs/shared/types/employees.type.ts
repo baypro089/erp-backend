@@ -1,11 +1,9 @@
-import { UserResponse } from './users.type';
 import { DepartmentResponse } from './departments.type';
 import { PositionResponse } from './positions.type';
 import { PagedResult } from './pagedResult.type';
 import { Status } from '../enums/employee-status.enum';
 import { Gender } from '../enums/gender.enum';
 import { Level } from '../enums/level.enum';
-import { Employee } from '@/entities/employee.entity';
 
 export type EmployeeResponse = {
   id: string;
@@ -30,6 +28,8 @@ export type EmployeeResponse = {
   createdAt: Date;
   updatedAt: Date;
   status: Status;
+  totalAnnualLeave: number;
+  usedAnnualLeave: number;
 };
 
 export type CreateEmployeeDto = {

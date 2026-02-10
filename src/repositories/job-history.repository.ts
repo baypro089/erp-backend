@@ -12,7 +12,7 @@ export class JobHistoryRepository extends Repository<JobHistory> {
     async getJobHistoriesByEmployeeId(employeeId: string): Promise<JobHistory[]> {
         return this.find({
             where: { employeeId }, 
-            relations: ['position', 'department'], 
+            relations: ['employee', 'employee.department', 'employee.currentPosition', 'position', 'department'], 
             order: { startDate: 'DESC' }
         });
     }

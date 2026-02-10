@@ -21,9 +21,8 @@ import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, Api
 import { LeaveRequestStatus } from "@libs/shared/enums/leave-request-status.enum";
 
 @ApiTags('Leave Requests')
-@Controller('hr/leave-requests')
+@Controller('leave-requests')
 @UseGuards(JwtAuthGuard)
-@ApiCookieAuth()
 export class LeaveRequestController {
     constructor(private readonly leaveRequestService: LeaveRequestService) {}
 
@@ -77,15 +76,10 @@ export class LeaveRequestController {
             page?: number,
             pageSize?: number,
         },
-        @Req() req: any
     ): Promise<ApiResponse<PagedAndFilteredLeaveRequest>> {
-        try {
-            const userId = req.user.id;
-            const roleCode = req.user.role?.code;
+        try { 
             
             const leaveRequests = await this.leaveRequestService.findAllWithFilteredAndPaged(
-                userId,
-                roleCode,
                 params.status,
                 params.startDateFrom,
                 params.startDateTo,
@@ -106,6 +100,58 @@ export class LeaveRequestController {
             return ResponseHelper.send(result);
         } catch (error) {
             console.error('Error in getLeaveRequests:', error);
+            throw error;
+        }
+    }
+
+    @Get('my')
+    @ApiOperation({ 
+        summary: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với bộ lọc', 
+        description: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với khả năng tìm kiếm, lọc theo trạng thái, thời gian và phân trang' 
+    })
+    @ApiQuery({ name: 'status', required: false, description: 'Lọc theo trạng thái (PENDING, APPROVED, REJECTED)' })
+    @ApiQuery({ name: 'startDateFrom', required: false, description: 'Ngày bắt đầu từ', type: Date })
+    @ApiQuery({ name: 'startDateTo', required: false, description: 'Ngày bắt đầu đến', type: Date })
+    @ApiQuery({ name: 'page', required: false, description: 'Số trang', type: Number })
+    @ApiQuery({ name: 'pageSize', required: false, description: 'Số bản ghi mỗi trang', type: Number })
+    @SwaggerApiResponse({ 
+        status: 200, 
+        description: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại thành công' 
+    })
+    async getMyLeaveRequests(
+        @Query() params: {
+            status?: string,
+            startDateFrom?: Date,
+            startDateTo?: Date,
+            page?: number,
+            pageSize?: number,
+        },
+        @Req() req: any
+    ): Promise<ApiResponse<PagedAndFilteredLeaveRequest>> {
+        try {
+            const userId = req.user.id;
+            const leaveRequests = await this.leaveRequestService.findAllByUserIdWithFilteredAndPaged(
+                userId,
+                params.status,
+                params.startDateFrom,
+                params.startDateTo,
+                params.page,
+                params.pageSize,
+            );
+
+            const result: PagedAndFilteredLeaveRequest = {
+                items: LeaveRequestsMapper.toResponseList(leaveRequests.items),
+                totalCount: leaveRequests.total,
+                page: params.page || 1,
+                pageSize: params.pageSize || 10,
+                totalPages: Math.ceil(leaveRequests.total / (params.pageSize || 10)),
+                hasNextPage: (params.page || 1) * (params.pageSize || 10) < leaveRequests.total,
+                hasPreviousPage: (params.page || 1) > 1,
+            };
+
+            return ResponseHelper.send(result);
+        } catch (error) {
+            console.error('Error in getMyLeaveRequests:', error);
             throw error;
         }
     }

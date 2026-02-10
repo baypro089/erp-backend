@@ -1,0 +1,26 @@
+import { SystemSettingMapper } from "@/mappers/system-setting.mapper";
+import { SystemSettingService } from "@/services/system-setting.service";
+import { ResponseHelper } from "@libs/core/helpers/response.helper";
+import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
+import { SystemSettingResponse, SystemSettingUpdateDto } from "@libs/shared/types/system-setting.type";
+import { Controller, Get, Patch } from "@nestjs/common";
+
+@Controller('system-settings')
+export class SystemSettingController {
+    // Controller methods would go here
+    constructor(
+        private readonly systemSettingService: SystemSettingService,
+    ) { }
+
+    @Get()
+    async findAll() : Promise<ApiResponse<SystemSettingResponse[]>> {
+        const settings = await this.systemSettingService.findAll();
+        return ResponseHelper.send(SystemSettingMapper.toDtoList(settings), 'Lấy danh sách cài đặt hệ thống thành công');
+    }
+
+    @Patch(':key')
+    async update(key: string, dto: SystemSettingUpdateDto) : Promise<ApiResponse<SystemSettingResponse>> {
+        const result = await this.systemSettingService.update(key, dto);
+        return ResponseHelper.send(SystemSettingMapper.toDto(result), 'Cập nhật cài đặt hệ thống thành công');
+    }
+}

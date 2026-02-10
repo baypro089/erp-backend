@@ -26,11 +26,17 @@ export class LeaveRequest {
   @Column({ name: 'end_date' })
   endDate: Date;
 
+  @Column('decimal', { precision: 4, scale: 1 }) // Cho phép nghỉ 0.5 ngày
+  duration: number; // Đây là kết quả sau khi đã trừ T7/CN
+
   @Column({ type: 'enum', enum: LeaveRequestType, default: LeaveRequestType.ANNUAL })
   type: LeaveRequestType;
 
   @Column()
   reason: string;
+
+  @Column({ name: 'rejection_reason', nullable: true})
+  rejectionReason: string;
 
   @Column({
     type: 'enum',

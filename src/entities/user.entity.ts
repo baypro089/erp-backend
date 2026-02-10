@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { Employee } from './employee.entity';
 import { Role } from './role.entity';
 import { UserStatus } from '@libs/shared/enums/user-status.enum';
+import { ResignationRequest } from './resignation-request.entity';
 
 @Entity('users')
 export class User {
@@ -20,7 +21,7 @@ export class User {
   @Column({ name: 'role_code' })
   roleCode: string;
 
-  @ManyToOne(() => Role, (role) => role.users, { onDelete: "RESTRICT" })  
+  @ManyToOne(() => Role, (role) => role.users, { onDelete: "RESTRICT", onUpdate: "CASCADE" })  
   @JoinColumn({ name: "role_code" })
   role: Role;
 
@@ -42,4 +43,6 @@ export class User {
   @Column({type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
   status: UserStatus;
 
+  @OneToMany(() => ResignationRequest, (resignationRequest) => resignationRequest.approver)
+  approvedResignationRequests: ResignationRequest[];
 }

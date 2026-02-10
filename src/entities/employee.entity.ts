@@ -19,6 +19,7 @@ import { Payslip } from './payslip.entity';
 import { Gender } from '@libs/shared/enums/gender.enum';
 import { Level } from '@libs/shared/enums/level.enum';
 import { Status } from '@libs/shared/enums/employee-status.enum';
+import { ResignationRequest } from './resignation-request.entity';
 
 @Entity('employees')
 export class Employee {
@@ -72,9 +73,6 @@ export class Employee {
   @Column({ type: 'enum', enum: Level, default: Level.JUNIOR })
   level: Level;
 
-  @Column({ type: 'uuid', name: 'manager_id', nullable: true })
-  managerId: string;
-
   @Column({ type: 'uuid', name: 'department_id' })
   departmentId: string;
 
@@ -89,6 +87,17 @@ export class Employee {
 
   @Column({ type: 'enum', enum: Status, default: Status.DRAFT })
   status: Status;
+
+  @Column({ default: 12 })
+  totalAnnualLeave: number; // Tổng quỹ (Thường là 12)
+
+  @Column('float', { default: 0 })
+  usedAnnualLeave: number; // Số ngày đã dùng
+
+  // Getter ảo để tính số dư còn lại (không lưu DB)
+  get remainingLeave(): number {
+    return this.totalAnnualLeave - this.usedAnnualLeave;
+  }
 
   @OneToOne(() => User, (user) => user.employee, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'user_id' })
@@ -111,10 +120,6 @@ export class Employee {
   @OneToMany(() => Payslip, (payslip) => payslip.employee)
   payslips: Payslip[];
 
-  @ManyToOne(() => Employee, (employee) => employee.subordinates)
-  @JoinColumn({ name: 'manager_id' })
-  manager: Employee;
-
-  @OneToMany(() => Employee, (employee) => employee.manager)
-  subordinates: Employee[];
+  @OneToMany(() => ResignationRequest, (resignationRequest) => resignationRequest.employee)
+  resignationRequests: ResignationRequest[];
 }

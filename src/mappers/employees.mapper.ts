@@ -25,10 +25,11 @@ export class EmployeesMapper {
       department:employee.department ? DepartmentsMapper.toResponse(employee.department) : undefined,
       currentPosition: employee.currentPosition ? PositionsMapper.toResponse(employee.currentPosition) : undefined,
       level: employee.level || undefined,
-      managerId: employee.managerId ?? undefined, 
       createdAt: employee.createdAt,
       updatedAt: employee.updatedAt,
       status: employee.status,
+      totalAnnualLeave: employee.totalAnnualLeave,
+      usedAnnualLeave: employee.usedAnnualLeave,
     };
   }
 

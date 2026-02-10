@@ -12,6 +12,12 @@ import { DepartmentsModule } from './modules/departments.module';
 import { PositionsModule } from './modules/positions.module';
 import { JobHistoryModule } from './modules/job-history.module';
 import { LeaveRequestModule } from './modules/leave-request.module';
+import { PayslipModule } from './modules/payslip.module';
+import { HolidayModule } from './modules/holiday.module';
+import { ResignationRequestModule } from './modules/resignation-request.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SystemSettingModule } from './modules/system-setting.module';
+import { SeedModule } from './seeds/seed.module';
 
 @Module({
   imports: [
@@ -26,12 +32,18 @@ import { LeaveRequestModule } from './modules/leave-request.module';
     PositionsModule,
     JobHistoryModule,
     LeaveRequestModule,
+    PayslipModule,
+    HolidayModule,
+    ResignationRequestModule,
+    SystemSettingModule,
+    SeedModule,
 
     ConfigModule.forRoot({
       isGlobal: true, 
       load: [databaseConfig],
     }),
 
+    ScheduleModule.forRoot(),
     
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

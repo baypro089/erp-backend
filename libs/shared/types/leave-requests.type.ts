@@ -1,4 +1,3 @@
-import { PagedResponse } from '@libs/core/interfaces/apiResponse.interface';
 import { LeaveRequestStatus, LeaveRequestType } from '../enums/leave-request-status.enum';
 import { PagedResult } from './pagedResult.type';
 import { EmployeeResponse } from './employees.type';
@@ -8,7 +7,9 @@ export type LeaveRequestResponse = {
   employee: EmployeeResponse;
   startDate: Date;
   endDate: Date;
+  duration: number;
   reason: string;
+  rejectionReason?: string;
   status: LeaveRequestStatus;
   type: LeaveRequestType;
   approverId: string | null;

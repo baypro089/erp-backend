@@ -11,10 +11,13 @@ export class PayslipsMapper {
       year: payslip.year,
       standardWorkDays: Number(payslip.standardWorkDays),
       actualWorkDays: Number(payslip.actualWorkDays),
-      totalSalary: Number(payslip.totalSalary),
+      baseSalary: Number(payslip.baseSalary),
+      unpaidLeaveDays: payslip.unpaidLeaveDays,
+      finalSalary: Number(payslip.finalSalary),
+      isPaid: payslip.isPaid,
+      note: payslip.note,
       details: payslip.details,
       createdAt: payslip.createdAt,
-      updatedAt: payslip.updatedAt,
     };
   }
 

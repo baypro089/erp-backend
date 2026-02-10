@@ -9,5 +9,6 @@ export enum LeaveRequestType {
   ANNUAL = 'ANNUAL',   // Phép năm (Thường có lương)
   SICK = 'SICK',       // Nghỉ ốm
   UNPAID = 'UNPAID',   // Không lương (Việc riêng)
+  MATERNITY = 'MATERNITY', // Thai sản
   OTHER = 'OTHER',
 }

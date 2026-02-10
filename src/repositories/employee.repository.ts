@@ -37,7 +37,7 @@ export class EmployeeRepository extends Repository<Employee> {
                 'department',  
                 'position', 
             ])
-            .where('employee.status NOT IN (:...inactiveStatus)', { inactiveStatus: [Status.INACTIVE, Status.TERMINATED] });
+            .where('employee.status NOT IN (:...inactiveStatus)', { inactiveStatus: [Status.RESIGNED] });
 
         if (employeeCode) {
             query.andWhere('employee.employeeCode = :employeeCode', { employeeCode });
@@ -105,7 +105,7 @@ export class EmployeeRepository extends Repository<Employee> {
                 'department',  
                 'position', 
             ])
-            .where('employee.status IN (:...deletedStatuses)', { deletedStatuses: [Status.INACTIVE, Status.TERMINATED] });
+            .where('employee.status IN (:...deletedStatuses)', { deletedStatuses: [Status.RESIGNED] });
 
         if (employeeCode) {
             query.andWhere('employee.employeeCode = :employeeCode', { employeeCode });
@@ -172,6 +172,6 @@ export class EmployeeRepository extends Repository<Employee> {
     }
 
     async deleteEmployees(ids: string[]): Promise<void> {
-        await this.update({ id: In(ids) }, { status: Status.INACTIVE });
+        await this.update({ id: In(ids) }, { status: Status.RESIGNED });
     }
 }

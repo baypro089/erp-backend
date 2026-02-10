@@ -1,4 +1,3 @@
-import { PagedResponse } from '@libs/core/interfaces/apiResponse.interface';
 import { EmployeeResponse } from './employees.type';
 import { PagedResult } from './pagedResult.type';
 

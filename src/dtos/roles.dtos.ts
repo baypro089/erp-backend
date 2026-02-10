@@ -29,14 +29,6 @@ export class CreateRoleDTO {
     @IsString({ each: true, message: 'Each permissionCode must be a string' })
     @ArrayUnique({ message: 'permissionCodes must be unique' })
     permissionCodes?: string[];
-
-    @ApiProperty({ 
-        example: true, 
-        description: 'Quyền truy cập trang quản trị',
-        required: false 
-    })
-    @IsNotEmpty({ message: 'AdminSiteAccess should not be empty' })
-    AdminSiteAccess: boolean;
 }
 
 export class UpdateRoleDTO {

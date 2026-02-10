@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { LoginDto } from '@libs/shared/types/login.type';
 import type { Response, Request } from "express";
 import { MailService } from './mail.service';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly redisService: RedisService,
     private config: ConfigService,
     private mailService: MailService,
+    private dataSource: DataSource,
   ) { }
 
   /* ================= LOGIN ================= */
@@ -117,6 +119,11 @@ export class AuthService {
     }
   }
 
+  /** ==============auth me============= */
+
+  async me(userId: string): Promise<User | null> {
+    return await this.usersService.findById(userId);
+  }
 
   /* ================= TOKEN HELPERS ================= */
 

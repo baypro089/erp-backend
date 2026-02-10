@@ -5,7 +5,7 @@ import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { CreateJobHistoryDto, JobHistoryResponse } from "@libs/shared/types/job-histories.type";
 import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 
-@Controller('/hr/job-histories')
+@Controller('job-histories')
 export class JobHistoryController {
     // Controller methods would go here
     constructor(private jobHistoryService: JobHistoryService) { }

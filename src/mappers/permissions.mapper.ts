@@ -6,6 +6,7 @@ export class PermissionMapper {
         return {
             permission_code: permission.permission_code,
             permission_name: permission.permission_name,
+            type: permission.type,
         };
     }
 

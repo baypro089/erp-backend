@@ -5,14 +5,12 @@ type RoleResponse = {
     role_name: string;
     is_active: boolean;
     permissions: PermissionResponse[];
-    AdminSiteAccess: boolean;
 }
 
 type CreateRoleDTO = {
     roleCode: string;
     roleName: string;
     permissionCodes: string[];
-    AdminSiteAccess: boolean;
 }
 
 type UpdateRoleDTO = {

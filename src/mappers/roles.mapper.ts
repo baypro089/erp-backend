@@ -8,7 +8,6 @@ export class RolesMapper {
             role_name: entity.role_name,
             is_active: entity.isActive,
             permissions: entity.permissions,
-            AdminSiteAccess: entity.AdminSiteAccess
         };
     }
     static toRoleTypeList(entities: Role[]): RoleResponse[] {
