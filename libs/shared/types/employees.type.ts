@@ -39,6 +39,7 @@ export type CreateEmployeeDto = {
   employeeCode: string;
   departmentId: string;
   currentPositionId: string;
+  initSalary?: number;
 };
 
 export type UpdateEmployeeDto = {

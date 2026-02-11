@@ -7,7 +7,7 @@ type CreateUserDto = {
     username: string;
     password: string;
     email: string;
-    role_code: string;
+    roleCode: string;
 }
 
 type UserResponse = {

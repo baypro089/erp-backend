@@ -106,7 +106,7 @@ export class PayslipController {
             );
 
             const result: PagedAndFilteredPayslip = {
-                items: PayslipsMapper.toResponseList(payslips.items),
+                items: PayslipsMapper.toTableResponseList(payslips.items),
                 totalCount: payslips.total,
                 page: params.page || 1,
                 pageSize: params.pageSize || 10,
@@ -152,7 +152,7 @@ export class PayslipController {
             );
 
             const result: PagedAndFilteredPayslip = {
-                items: PayslipsMapper.toResponseList(payslips.items),
+                items: PayslipsMapper.toTableResponseList(payslips.items),
                 totalCount: payslips.total,
                 page: params.page || 1,
                 pageSize: params.pageSize || 10,
@@ -163,7 +163,7 @@ export class PayslipController {
             return ResponseHelper.send(result);
         }
         catch (error) {
-            console.error('Error in getMyPayslips:', error);
+            console.error(`Error in getMyPayslips: ${employeeId}`, error);
             throw error;
         }
     }
@@ -189,7 +189,29 @@ export class PayslipController {
             const payslip = await this.payslipService.markPayslipAsPaid(id);
             return ResponseHelper.send(PayslipsMapper.toResponse(payslip));
         } catch (error) {
-            console.error('Error in markAsPaid:', error);
+            console.error(`Error in markAsPaid: ${id}`, error);
+            throw error;
+        }
+    }
+
+    @Get(':id')
+    @ApiOperation({ 
+        summary: 'Lấy chi tiết phiếu lương theo ID',
+        description: 'Lấy thông tin chi tiết của một phiếu lương dựa trên ID của nó.'
+    })
+    @ApiParam({ name: 'id', description: 'ID của phiếu lương' })
+    @SwaggerApiResponse({ 
+        status: 200, 
+        description: 'Lấy chi tiết phiếu lương thành công'
+    })
+    async getPayslipById(
+        @Param('id') id: string
+    ): Promise<ApiResponse<PayslipResponse>> {
+        try {
+            const payslip = await this.payslipService.getPayslipById(id);
+            return ResponseHelper.send(PayslipsMapper.toResponse(payslip));
+        } catch (error) {
+            console.error(`Error in getPayslipById: ${id}`, error);
             throw error;
         }
     }

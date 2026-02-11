@@ -139,4 +139,17 @@ export class ResignationRequestController {
             throw error;
         }
     }
+
+    @Get('process/due')
+    @ApiOperation({ summary: 'Xử lý đơn nghỉ việc đến hạn', description: 'Cron Job: Chạy mỗi đêm để quét các đơn đã đến hạn và tự động chuyển trạng thái' })
+    @SwaggerApiResponse({ status: 200, description: 'Xử lý đơn nghỉ việc đến hạn thành công' })
+    async processDueResignations(): Promise<ApiResponse<void>> {
+        try {
+            await this.resignationRequestService.processDueResignations();
+            return ResponseHelper.send(undefined, 'Xử lý đơn nghỉ việc đến hạn thành công');
+        } catch (error) {
+            console.error('Error in processDueResignations:', error);
+            throw error;
+        }
+    }
 }

@@ -17,7 +17,17 @@ export type PayslipResponse = {
   createdAt: Date;
 };
 
-export type PagedAndFilteredPayslip = PagedResult<PayslipResponse>;
+export type PaySlipTableResponse = {
+  id: string;
+  employee: EmployeeResponse;
+  baseSalary: number;
+  actualWorkDays: number;
+  standardWorkDays: number;
+  finalSalary: number;
+  isPaid: boolean;
+}
+
+export type PagedAndFilteredPayslip = PagedResult<PaySlipTableResponse>;
 
 export type PayrollItemResult = {
   employeeId: string;

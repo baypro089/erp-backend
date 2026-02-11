@@ -1,4 +1,5 @@
 import { Payslip } from "@/entities/payslip.entity";
+import { Status } from "@libs/shared/enums/employee-status.enum";
 import { Injectable } from "@nestjs/common";
 import { DataSource, Repository } from "typeorm";
 
@@ -17,8 +18,9 @@ export class PayslipRepository extends Repository<Payslip> {
     ): Promise<{ items: Payslip[], total: number }> {
         const query = this.createQueryBuilder('payslips')
             .leftJoinAndSelect('payslips.employee', 'employee')
-            .leftJoinAndSelect('employee.department', 'department')
-            .leftJoinAndSelect('employee.currentPosition', 'position')
+            .where('employee.status IN (:...statuses)', {
+                statuses: [Status.ACTIVE, Status.MATERNITY_LEAVE, Status.PROBATION]
+            });
 
         if (employeeId) {
             query.andWhere('payslips.employeeId = :employeeId', { employeeId });

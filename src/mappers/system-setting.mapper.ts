@@ -1,4 +1,6 @@
+import { SalaryComponent } from "@/entities/salary-component";
 import { SystemSetting } from "@/entities/system-setting";
+import { SalaryComponentResponse } from "@libs/shared/types/salary-component.type";
 import { SystemSettingResponse } from "@libs/shared/types/system-setting.type";
 
 export class SystemSettingMapper {
@@ -13,5 +15,14 @@ export class SystemSettingMapper {
 
     static toDtoList(entities: SystemSetting[]): SystemSettingResponse[] {
         return entities.map((entity) => this.toDto(entity));
+    }
+
+    static salaryComponentToDtoList(entities: SalaryComponent[]): SalaryComponentResponse[] {
+        return entities.map((entity) => ({
+            id: entity.id,
+            name: entity.name,
+            code: entity.code,
+            type: entity.type,
+        }));
     }
 }

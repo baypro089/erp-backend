@@ -7,6 +7,10 @@ import { createHash } from 'crypto';
 import { RedisService } from "./redis.service";
 import { DepartmentRepository } from "@/repositories/department.repository";
 import { PositionRepository } from "@/repositories/position.repository";
+import { DataSource } from "typeorm";
+import { Department } from "@/entities/department.entity";
+import { Position } from "@/entities/position.entity";
+import { JobHistory } from "@/entities/job-history.entity";
 
 
 @Injectable()
@@ -16,6 +20,7 @@ export class EmployeeService {
         private readonly employeeRepository: EmployeeRepository,
         private readonly departmentRepository: DepartmentRepository,
         private readonly positionRepository: PositionRepository,
+        private readonly dataSource: DataSource,
         private readonly redisService: RedisService,
     ) { }
 
@@ -131,30 +136,50 @@ export class EmployeeService {
         return this.employeeRepository.findByCode(employeeCode);
     }
 
-    async createEmployee(employeeData: Partial<Employee>): Promise<Employee> {
-        const department = await this.departmentRepository.findById(employeeData.departmentId!);
-        if (!department) {
-            throw new Error(`Department not found: ${employeeData.departmentId}`);
-        }
-        const position = await this.positionRepository.findById(employeeData.currentPositionId!);
-        if (!position) {
-            throw new Error(`Position not found: ${employeeData.currentPositionId}`);
-        }
+    async createEmployee(employeeData: CreateEmployeeDto): Promise<Employee> {
+        return this.dataSource.transaction(async (manager) => {
 
-        // Chuẩn bị dữ liệu để lưu
-        const dataToSave: Partial<Employee> = {
-            fullName: employeeData.fullName,
-            startDate: new Date(employeeData.startDate!), // Chuyển sang Date
-            employeeCode: employeeData.employeeCode,
-            department,
-            currentPosition: position,
-        };
+            const department = await manager.getRepository(Department)
+                .findOne({ where: { id: employeeData.departmentId } });
+            if (!department) {
+                throw new Error(`Department not found: ${employeeData.departmentId}`);
+            }
+            
+            const position = await manager.getRepository(Position)
+                .findOne({ where: { id: employeeData.currentPositionId } });
+            if (!position) {
+                throw new Error(`Position not found: ${employeeData.currentPositionId}`);
+            }
 
-        const newEmployee = await this.employeeRepository.createEmployee(dataToSave);
-        console.log('Creating Employee in Service:', newEmployee);
-        await this.redisService.delByPrefix('employees:');
-        await this.redisService.del('all_employees');
-        return newEmployee;
+            // Chuẩn bị dữ liệu để lưu
+            const dataToSave = manager.getRepository(Employee).create({
+                fullName: employeeData.fullName,
+                startDate: new Date(employeeData.startDate!), // Chuyển sang Date
+                employeeCode: employeeData.employeeCode,
+                department,
+                currentPosition: position,
+            });
+
+            // Tạo mới nhân viên
+            const newEmployee = await manager.getRepository(Employee).save(dataToSave);
+            console.log('Creating Employee in Service:', newEmployee);
+
+            // Tạo lich sử công việc khởi tạo cho nhân viên
+            const dataJobHistory = manager.getRepository(JobHistory).create({
+                employee: newEmployee,
+                position: position,
+                department: department,
+                startDate: new Date(employeeData.startDate!),
+                salaryAtTime: employeeData.initSalary || 0,
+                note: 'Initial job history record',
+            });
+            await manager.getRepository(JobHistory).save(dataJobHistory);
+            
+            await this.redisService.delByPrefix('employees:');
+            await this.redisService.del('all_employees');
+            
+            return newEmployee;
+        });
     }
 
     async updateEmployee(id: string, employeeData: Partial<Employee>): Promise<Employee | null> {

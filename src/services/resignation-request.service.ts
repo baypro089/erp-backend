@@ -33,7 +33,7 @@ export class ResignationRequestService {
         }
 
         const newRequest = this.resignationRequestRepository.create({
-            employeeId: dto.employeeId,
+            employee: { id: dto.employeeId } as Employee,
             submitDate: new Date(),
             desiredLastDay: dto.desiredLastDay,
             reason: dto.reason,
@@ -47,7 +47,7 @@ export class ResignationRequestService {
     //HR duyệt đơn nghỉ việc
     async approve(id: string, approvedLastDay: Date, hrNote?: string): Promise<ResignationRequest> {
         const resignationRequest = await this.resignationRequestRepository.findOne({
-            where: { id }, relations: ['employee']
+            where: { id }, relations: ['employee', 'employee.user']
         });
         if (!resignationRequest) {
             throw new Error('Resignation request not found.');
@@ -62,7 +62,7 @@ export class ResignationRequestService {
     //HR từ chối đơn nghỉ việc
     async reject(id: string, hrNote: string): Promise<ResignationRequest> {
         const resignationRequest = await this.resignationRequestRepository.findOne({
-            where: { id }, relations: ['employee']
+            where: { id }, relations: ['employee', 'employee.user']
         });
         if (!resignationRequest) {
             throw new Error('Resignation request not found.');
@@ -167,6 +167,7 @@ export class ResignationRequestService {
         return this.resignationRequestRepository.find({
             where: { employeeId },
             order: { submitDate: 'DESC' },
+            relations: ['employee', 'approver'],
         });
     }
 }

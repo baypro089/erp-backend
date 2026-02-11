@@ -4,9 +4,8 @@ import { EmployeeRepository } from "@/repositories/employee.repository";
 import { PayslipRepository } from "@/repositories/payslip.repository";
 import { LeaveRequestStatus, LeaveRequestType } from "@libs/shared/enums/leave-request-status.enum";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { DataSource, LessThanOrEqual } from "typeorm";
+import { DataSource, In, LessThanOrEqual } from "typeorm";
 import { RedisService } from "./redis.service";
-import { createHash } from "crypto";
 import { PayrollGenerationResult, PayrollItemResult } from "@libs/shared/types/payslips.type";
 import { Status } from "@libs/shared/enums/employee-status.enum";
 import { Employee } from "@/entities/employee.entity";
@@ -14,17 +13,19 @@ import { ResignationRequest } from "@/entities/resignation-request.entity";
 import { ResignationStatus } from "@libs/shared/enums/resignation-status.enum";
 import { SystemSetting } from "@/entities/system-setting";
 import { JobHistory } from "@/entities/job-history.entity";
+import { Holiday } from "@/entities/holiday.entity";
+import { getStandardWorkDays } from "@/utils/date.util";
 
 const SETTING_KEYS = {
-  LUNCH: 'GLOBAL_LUNCH_AMOUNT',
-  TRANSPORT: 'GLOBAL_TRANSPORT_AMOUNT',
-  BHXH_RATE: 'INSURANCE_RATE_PERCENT',
+    LUNCH: 'GLOBAL_LUNCH_AMOUNT',
+    TRANSPORT: 'GLOBAL_TRANSPORT_AMOUNT',
+    BHXH_RATE: 'INSURANCE_RATE_PERCENT',
 };
 
 const COMPONENT_KEYS = {
-  LUNCH: 'LUNCH',          // Khớp với code trong bảng SalaryComponent
-  TRANSPORT: 'TRANSPORT',  // Khớp với code trong bảng SalaryComponent
-  BHXH: 'BHXH',
+    LUNCH: 'LUNCH',          // Khớp với code trong bảng SalaryComponent
+    TRANSPORT: 'TRANSPORT',  // Khớp với code trong bảng SalaryComponent
+    BHXH: 'BHXH',
 };
 
 @Injectable()
@@ -36,12 +37,19 @@ export class PayslipService {
         private readonly redisService: RedisService,
     ) { }
 
-    
-
     // Hàm tính lương cho 1 nhân viên
     async calculatePayslip(employeeId: string, month: number, year: number): Promise<Payslip> {
         return this.dataSource.transaction(async (manager) => {
-            const STANDARD_WORK_DAYS = 26; // Giả định công chuẩn
+
+            // Lấy danh sách ngày lễ từ database
+            const holidayRepo = manager.getRepository(Holiday);
+            const dbHolidays = await holidayRepo.find();
+            const holidayStrings = dbHolidays
+                .map(h => {
+                    const date = new Date(h.date);
+                    return date.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+                });
+            const STANDARD_WORK_DAYS = getStandardWorkDays(month, year, holidayStrings, true);
             const payslipRepo = manager.getRepository(Payslip);
 
             // 1. Kiểm tra xem đã chốt lương tháng này chưa
@@ -55,7 +63,9 @@ export class PayslipService {
 
             // 2. Lấy thông tin nhân viên
             const employeeRepo = manager.getRepository(Employee);
-            const employee = await employeeRepo.findOne({ where: { id: employeeId } });
+            const employee = await employeeRepo.findOne({
+                where: { id: employeeId, status: In([Status.ACTIVE, Status.MATERNITY_LEAVE, Status.PROBATION]) }
+            });
             if (!employee) throw new NotFoundException('Nhân viên không tồn tại');
 
             // 3. Lấy mức lương hiện tại (Từ JobHistory mới nhất đang active)
@@ -74,7 +84,7 @@ export class PayslipService {
                 return await payslipRepo.save({
                     employee,
                     month, year,
-                    standardWorkDays: 26,
+                    standardWorkDays: STANDARD_WORK_DAYS,
                     baseSalary: baseSalary,
                     actualWorkDays: 0,
                     finalSalary: 0,
@@ -136,7 +146,7 @@ export class PayslipService {
             let finalSalary = salaryPerDay * actualWorkDays;
 
             // Cộng thêm phụ cấp/thưởng - Trừ đi các khoản khác
-            const settings = await manager.getRepository(SystemSetting).find({where: {isActive: true}});
+            const settings = await manager.getRepository(SystemSetting).find({ where: { isActive: true } });
 
             const settingMap = new Map(settings.map(s => [s.key, Number(s.value)]));
 
@@ -209,9 +219,9 @@ export class PayslipService {
             }
 
             // Clear cache
-            await this.redisService.delByPrefix(`payslips:`);
             await this.redisService.delByPrefix('payslips:all:');
-            await this.redisService.delByPrefix(`unpaid_leaves:`);
+            await this.redisService.delByPrefix('unpaid_leaves:');
+            await this.redisService.delByPrefix('my_payslips:');
             return result;
         });
     }
@@ -255,7 +265,7 @@ export class PayslipService {
 
     // Chạy tính lương cho toàn bộ nhân viên (Batch Job)
     async generatePayrollForMonth(month: number, year: number): Promise<PayrollGenerationResult> {
-        const employees = await this.employeeRepository.find();
+        const employees = await this.employeeRepository.find({ where: { status: In([Status.ACTIVE, Status.MATERNITY_LEAVE, Status.PROBATION]) } });
         const items: PayrollItemResult[] = [];
         let successCount = 0;
         let failedCount = 0;
@@ -282,6 +292,11 @@ export class PayslipService {
             }
         }
 
+        // Clear cache
+        await this.redisService.delByPrefix('payslips:all:');
+        await this.redisService.delByPrefix('unpaid_leaves:');
+        await this.redisService.delByPrefix('my_payslips:');
+
         return {
             month,
             year,
@@ -298,8 +313,7 @@ export class PayslipService {
         page?: number,
         pageSize?: number
     ): Promise<{ items: Payslip[], total: number }> {
-        const keyRaw = `payslips:all:${month || 'all'}:${year || 'all'}:${page || 'all'}:${pageSize || 'all'}`;
-        const cacheKey = createHash('md5').update(keyRaw).digest('hex');
+        const cacheKey = `payslips:all:${month || 'all'}:${year || 'all'}:${page || 'all'}:${pageSize || 'all'}`;
 
         const cached = await this.redisService.get<{ items: Payslip[], total: number }>(cacheKey);
         if (cached) {
@@ -323,10 +337,9 @@ export class PayslipService {
         const { employeeId, month, year } = payslip;
 
         // Clear cache
-        await this.redisService.delByPrefix(`payslips:`);
         await this.redisService.delByPrefix('payslips:all:');
-        await this.redisService.delByPrefix(`unpaid_leaves:`);
-        await this.redisService.delByPrefix(`my_payslips:`);
+        await this.redisService.delByPrefix('unpaid_leaves:');
+        await this.redisService.delByPrefix('my_payslips:');
         return result;
     }
 
@@ -337,8 +350,7 @@ export class PayslipService {
         page?: number,
         pageSize?: number
     ): Promise<{ items: Payslip[], total: number }> {
-        const keyRaw = `my_payslips:${employeeId}:${month || 'all'}:${year || 'all'}:${page || 'all'}:${pageSize || 'all'}`;
-        const cacheKey = createHash('md5').update(keyRaw).digest('hex');
+        const cacheKey = `my_payslips:${employeeId}:${month || 'all'}:${year || 'all'}:${page || 'all'}:${pageSize || 'all'}`;
         const cached = await this.redisService.get<{ items: Payslip[], total: number }>(cacheKey);
         if (cached) {
             return cached;
@@ -348,5 +360,16 @@ export class PayslipService {
         result.items = result.items.filter(p => p.employee.id === employeeId);
         await this.redisService.set(cacheKey, result, 3600);
         return result;
+    }
+
+    async getPayslipById(payslipId: string): Promise<Payslip> {
+        const payslip = await this.payslipRepository.findOne({
+            where: { id: payslipId },
+            relations: ['employee', 'employee.department', 'employee.currentPosition']
+        });
+        if (!payslip) {
+            throw new NotFoundException('Payslip not found');
+        }
+        return payslip;
     }
 }

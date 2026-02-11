@@ -1,15 +1,16 @@
 import { SystemSettingController } from "@/controllers/system-setting.controller";
+import { SalaryComponent } from "@/entities/salary-component";
 import { SystemSetting } from "@/entities/system-setting";
+import { SalaryComponentRepository } from "@/repositories/salary-component.repository";
 import { SystemSettingRepository } from "@/repositories/system-setting.repository";
 import { SystemSettingService } from "@/services/system-setting.service";
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Type } from "class-transformer";
 
 @Module({
     imports: [
         // Import other modules if needed
-        TypeOrmModule.forFeature([ SystemSetting ]),
+        TypeOrmModule.forFeature([ SystemSetting, SalaryComponent ]),
     ],
     controllers: [
         // Register controllers here
@@ -17,7 +18,7 @@ import { Type } from "class-transformer";
     ],
     providers: [
         // Register services and repositories here
-        SystemSettingRepository, SystemSettingService
+        SystemSettingRepository, SystemSettingService, SalaryComponentRepository
     ],
     exports: [
         // Export services or repositories if needed

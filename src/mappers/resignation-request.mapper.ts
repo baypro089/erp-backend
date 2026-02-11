@@ -7,7 +7,7 @@ export class ResignationRequestMapper {
     static toResponse(entity: ResignationRequest): ResignationRequestResponse {
         return {
             id: entity.id,
-            employee:EmployeesMapper.toResponse(entity.employee),
+            employee: EmployeesMapper.toResponse(entity.employee),
             approver: entity.approver ? UsersMapper.toDTO(entity.approver) : undefined,
             summitDate: entity.submitDate,
             desiredLastDay: entity.desiredLastDay,

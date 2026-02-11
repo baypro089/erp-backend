@@ -7,6 +7,7 @@ import {
   IsDateString,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -31,6 +32,13 @@ export class CreateEmployeeDto {
   @IsNotEmpty()
   startDate: Date;
 
+  @ApiProperty({ 
+    example: 15000000, 
+    description: 'Mức lương khởi điểm' 
+  })
+  @IsNumber()
+  @IsOptional()
+  initSalary?: number;
 
   @ApiProperty({ 
     example: 'EMP001', 

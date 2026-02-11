@@ -1,5 +1,5 @@
 import { Payslip } from '@/entities/payslip.entity';
-import { PayslipResponse } from '@libs/shared/types/payslips.type';
+import { PayslipResponse, PaySlipTableResponse } from '@libs/shared/types/payslips.type';
 import { EmployeesMapper } from './employees.mapper';
 
 export class PayslipsMapper {
@@ -21,8 +21,24 @@ export class PayslipsMapper {
     };
   }
 
+  static toTableResponse(payslip: Payslip): PaySlipTableResponse {
+    return {
+      id: payslip.id,
+      employee: EmployeesMapper.toResponse(payslip.employee),
+      baseSalary: Number(payslip.baseSalary),
+      actualWorkDays: Number(payslip.actualWorkDays),
+      standardWorkDays: Number(payslip.standardWorkDays),
+      finalSalary: Number(payslip.finalSalary),
+      isPaid: payslip.isPaid,
+    };
+  }
+
   static toResponseList(payslips: Payslip[]): PayslipResponse[] {
     return payslips.map((payslip) => this.toResponse(payslip));
+  }
+
+  static toTableResponseList(payslips: Payslip[]): PaySlipTableResponse[] {
+    return payslips.map((payslip) => this.toTableResponse(payslip));
   }
 }
 

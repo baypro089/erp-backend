@@ -45,3 +45,54 @@ export const calculateWorkingDays = (startDate: Date, endDate: Date, dbHolidays:
   // Trả về tổng số ngày làm việc
   return count;
 };
+
+/**
+ * Tính số ngày công chuẩn trong một tháng
+ * @param month Tháng (1-12)
+ * @param year Năm (VD: 2026)
+ * @param holidays Danh sách các ngày lễ trong tháng định dạng ['YYYY-MM-DD'] (Optional)
+ * @param workOnSaturday Công ty có làm việc thứ 7 không? (Default: false)
+ * @returns Số ngày công chuẩn
+ */
+export const getStandardWorkDays = (
+  month: number,
+  year: number,
+  holidays: string[] = [],
+  workOnSaturday: boolean = false,
+): number => {
+  let workDays = 0;
+  
+  // Ngày đầu tiên của tháng
+  const startDate = new Date(year, month - 1, 1);
+  // Ngày cuối cùng của tháng (Truyền 0 vào ngày của tháng tiếp theo sẽ lùi về ngày cuối tháng này)
+  const endDate = new Date(year, month, 0); 
+
+  // Lặp qua từng ngày trong tháng
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const dayOfWeek = d.getDay(); // 0 là Chủ Nhật, 6 là Thứ Bảy
+
+    // Tránh lỗi Timezone khi dùng toISOString(), ta tự build chuỗi YYYY-MM-DD
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const dateString = `${yyyy}-${mm}-${dd}`;
+
+    // Kiểm tra cuối tuần
+    let isWeekend = false;
+    if (workOnSaturday) {
+      isWeekend = dayOfWeek === 0; // Chỉ nghỉ Chủ Nhật
+    } else {
+      isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Nghỉ cả T7, CN
+    }
+
+    // Kiểm tra có trúng ngày lễ không
+    const isHoliday = holidays.includes(dateString);
+
+    // Nếu không phải cuối tuần và không phải ngày lễ -> Cộng 1 ngày công
+    if (!isWeekend && !isHoliday) {
+      workDays++;
+    }
+  }
+
+  return workDays;
+};
