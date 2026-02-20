@@ -4,9 +4,11 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ImportReceipt } from './import-receipt.entity';
 
 @Entity({ name: 'suppliers' })
 export class Supplier {
@@ -19,12 +21,18 @@ export class Supplier {
   @Column({ type: 'varchar', length: 20, name: 'contact_phone' })
   contactPhone: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  address: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive: boolean;
+
+  @OneToMany(() => ImportReceipt, (importReceipt) => importReceipt.supplier)
+  importReceipts: ImportReceipt[];
 }

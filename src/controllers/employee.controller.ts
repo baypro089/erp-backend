@@ -21,12 +21,12 @@ export class EmployeeController {
     @Get()
     @ApiOperation({ summary: 'Lấy danh sách tất cả nhân viên', description: 'Lấy danh sách tất cả nhân viên đang hoạt động' })
     @SwaggerApiResponse({ status: 200, description: 'Lấy danh sách nhân viên thành công' })
-    async getAllEmployees(): Promise<ApiResponse<EmployeeResponse[]>> {
+    async getAllEmployees(@Query('permissionPortal') permissionPortal?: string): Promise<ApiResponse<EmployeeResponse[]>> {
         try {
-            const employees = await this.employeeService.getAllEmployees();
+            const employees = await this.employeeService.getAllEmployees(permissionPortal);
             return ResponseHelper.send(EmployeesMapper.toDTOList(employees));
         } catch (error) {
-            console.error('Error in getAllEmployees:', error);
+            console.error('Error in getAllEmployees:', error);  
             throw error;
         }
     }

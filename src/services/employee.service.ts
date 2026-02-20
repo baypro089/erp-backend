@@ -7,10 +7,11 @@ import { createHash } from 'crypto';
 import { RedisService } from "./redis.service";
 import { DepartmentRepository } from "@/repositories/department.repository";
 import { PositionRepository } from "@/repositories/position.repository";
-import { DataSource } from "typeorm";
+import { DataSource, In } from "typeorm";
 import { Department } from "@/entities/department.entity";
 import { Position } from "@/entities/position.entity";
 import { JobHistory } from "@/entities/job-history.entity";
+import { Status } from "@libs/shared/enums/employee-status.enum";
 
 
 @Injectable()
@@ -24,13 +25,29 @@ export class EmployeeService {
         private readonly redisService: RedisService,
     ) { }
 
-    async getAllEmployees(): Promise<Employee[]> {
-        const cacheKey = 'all_employees';
+    async getAllEmployees(permissionPortal?: string): Promise<Employee[]> {
+        const normalized = (permissionPortal || 'all').toString().trim();
+        const cacheKey = `all_employees:${normalized}`;
         const cachedEmployees: Employee[] | undefined | null = await this.redisService.get(cacheKey);
         if (cachedEmployees) {
             return cachedEmployees;
         }
-        const employees = await this.employeeRepository.findAllEmployees();
+
+        // Use QueryBuilder to ensure proper joins when permissions is a relation (m:n)
+        const qb = this.employeeRepository.createQueryBuilder('employee')
+            .leftJoinAndSelect('employee.user', 'user')
+            .leftJoin('user.role', 'role')
+            .leftJoin('role.permissions', 'perm')
+            .where('employee.status IN (:...statuses)', { statuses: [Status.ACTIVE, Status.PROBATION] });
+
+        if (permissionPortal) {
+            qb.andWhere('perm.permission_code = :permCode', { permCode: permissionPortal });
+        }
+
+        // Select only employee fields to reduce payload; adjust if callers need relations
+        qb.select(['employee.id', 'employee.fullName', 'employee.employeeCode', 'employee.startDate']);
+
+        const employees = await qb.getMany();
         await this.redisService.set(cacheKey, employees, 300); // Cache for 5 minutes
         return employees;
     }
@@ -144,7 +161,7 @@ export class EmployeeService {
             if (!department) {
                 throw new Error(`Department not found: ${employeeData.departmentId}`);
             }
-            
+
             const position = await manager.getRepository(Position)
                 .findOne({ where: { id: employeeData.currentPositionId } });
             if (!position) {
@@ -174,10 +191,10 @@ export class EmployeeService {
                 note: 'Initial job history record',
             });
             await manager.getRepository(JobHistory).save(dataJobHistory);
-            
+
             await this.redisService.delByPrefix('employees:');
-            await this.redisService.del('all_employees');
-            
+            await this.redisService.delByPrefix('all_employees:');
+
             return newEmployee;
         });
     }
@@ -200,7 +217,7 @@ export class EmployeeService {
 
         const updatedEmployee = await this.employeeRepository.updateEmployee(id, employeeData);
         await this.redisService.delByPrefix('employees:');
-        await this.redisService.del('all_employees');
+        await this.redisService.delByPrefix('all_employees:');
         return updatedEmployee;
     }
 
@@ -210,6 +227,6 @@ export class EmployeeService {
         }
         await this.employeeRepository.deleteEmployees(ids);
         await this.redisService.delByPrefix('employees:');
-        await this.redisService.del('all_employees');
+        await this.redisService.delByPrefix('all_employees:');
     }
 }

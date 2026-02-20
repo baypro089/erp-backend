@@ -81,7 +81,7 @@ export class PayslipService {
             // CASE ĐẶC BIỆT: Nghỉ thai sản
             if (employee.status === Status.MATERNITY_LEAVE) {
                 // Tạo phiếu lương 0 đồng
-                return await payslipRepo.save({
+                const payslip = payslipRepo.create({
                     employee,
                     month, year,
                     standardWorkDays: STANDARD_WORK_DAYS,
@@ -92,6 +92,7 @@ export class PayslipService {
                     note: 'Nhân viên nghỉ thai sản (Lương do BHXH chi trả)',
                     isPaid: true // Coi như xong
                 });
+                return payslipRepo.save(payslip);
             }
 
             // 4. Kiểm tra ResignationRequest APPROVED

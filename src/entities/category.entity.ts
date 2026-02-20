@@ -6,9 +6,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Product } from './product.entity';
 
 @Entity({ name: 'categories' })
 export class Category {
@@ -27,10 +29,16 @@ export class Category {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
-  @ManyToOne(() => Category)
+  @ManyToOne(() => Category, (category) => category.childrens, { nullable: true })
   @JoinColumn({ name: 'parent_id' })
   parent: Category;
+
+  @OneToMany(() => Category, (category) => category.parent)
+  childrens: Category[];
+
+  @OneToMany(() => Product, (product) => product.category)
+  products: Product[];
 }

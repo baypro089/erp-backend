@@ -1,48 +1,37 @@
-
-import {
-  Column,
-  CreateDateColumn,
-  DeleteDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
-import { ImportReceipt } from './import-receipt.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Product } from './product.entity';
+import { ImportReceipt } from './import-receipt.entity';
 
-@Entity({ name: 'import_details' })
+@Entity('import_details')
 export class ImportDetail {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
-  @Column({ type: 'uuid', name: 'import_receipt_id' })
-  importReceiptId: string;
+    @Column({ type: 'uuid', name: 'receipt_id' })
+    receiptId: string;
 
-  @Column({ type: 'uuid', name: 'product_id' })
-  productId: string;
+    @Column({ type: 'uuid', name: 'product_id' })
+    productId: string;
 
-  @Column({ type: 'int' })
-  quantity: number;
+    @Column('int')
+    quantity: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, name: 'unit_price' })
-  unitPrice: number;
+    @Column('decimal', { precision: 15, scale: 2 })
+    unitPrice: number; // Giá nhập vào (Cost Price)
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+    @Column('decimal', { precision: 15, scale: 2 })
+    amount: number; // = quantity * unitPrice
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+    // QUAN TRỌNG: Lưu tạm danh sách Serial vừa quét được vào đây
+    // Khi trạng thái chuyển sang COMPLETED, list này sẽ được bắn sang bảng ProductSerial
+    @Column('jsonb', { nullable: true })
+    scannedSerials: string[];
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
+    @ManyToOne(() => ImportReceipt, (receipt) => receipt.items)
+    @JoinColumn({ name: 'receipt_id' })
+    receipt: ImportReceipt;
 
-  @ManyToOne(() => ImportReceipt, (receipt) => receipt.importDetails)
-  @JoinColumn({ name: 'import_receipt_id' })
-  importReceipt: ImportReceipt;
-
-  @ManyToOne(() => Product)
-  @JoinColumn({ name: 'product_id' })
-  product: Product;
+    @ManyToOne(() => Product)
+    @JoinColumn({ name: 'product_id' })
+    product: Product;
 }

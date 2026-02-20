@@ -3,6 +3,7 @@ import { Employee } from './employee.entity';
 import { Role } from './role.entity';
 import { UserStatus } from '@libs/shared/enums/user-status.enum';
 import { ResignationRequest } from './resignation-request.entity';
+import { LeaveRequest } from './leave-request.entity';
 
 @Entity('users')
 export class User {
@@ -45,4 +46,7 @@ export class User {
 
   @OneToMany(() => ResignationRequest, (resignationRequest) => resignationRequest.approver)
   approvedResignationRequests: ResignationRequest[];
+
+  @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.approver)
+  approvedLeaveRequests: LeaveRequest[];
 }

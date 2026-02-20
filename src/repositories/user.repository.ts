@@ -74,7 +74,9 @@ export class UserRepository extends Repository<User> {
     query.orderBy('user.createdAt', 'DESC');
 
     if (page && pageSize) {
-      query.skip((page - 1) * pageSize).take(pageSize);
+      const pageNum = Number(page);
+      const pageSizeNum = Number(pageSize);
+      query.skip((pageNum - 1) * pageSizeNum).take(pageSizeNum);
     }
 
     const [items, totalItems] = await query.getManyAndCount();

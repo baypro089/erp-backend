@@ -1,15 +1,16 @@
 import { LeaveRequestService } from "@/services/leave-request.service";
-import { 
-    Controller, 
-    Post, 
-    Get, 
-    Patch, 
-    Body, 
-    Param, 
-    Query, 
-    Req, 
+import {
+    Controller,
+    Post,
+    Get,
+    Patch,
+    Body,
+    Param,
+    Query,
+    Req,
     UseGuards,
-    BadRequestException 
+    BadRequestException,
+    UnauthorizedException
 } from "@nestjs/common";
 import { CreateLeaveRequestDto } from "@/dtos/leave-requests.dto";
 import { LeaveRequestsMapper } from "@/mappers/leave-requests.mapper";
@@ -24,21 +25,21 @@ import { LeaveRequestStatus } from "@libs/shared/enums/leave-request-status.enum
 @Controller('leave-requests')
 @UseGuards(JwtAuthGuard)
 export class LeaveRequestController {
-    constructor(private readonly leaveRequestService: LeaveRequestService) {}
+    constructor(private readonly leaveRequestService: LeaveRequestService) { }
 
     @Post()
-    @ApiOperation({ 
-        summary: 'Tạo đơn nghỉ phép mới', 
-        description: 'Tạo đơn xin nghỉ phép cho nhân viên. Hệ thống sẽ kiểm tra trùng lịch nghỉ và validate thời gian.' 
+    @ApiOperation({
+        summary: 'Tạo đơn nghỉ phép mới',
+        description: 'Tạo đơn xin nghỉ phép cho nhân viên. Hệ thống sẽ kiểm tra trùng lịch nghỉ và validate thời gian.'
     })
     @ApiBody({ type: CreateLeaveRequestDto })
-    @SwaggerApiResponse({ 
-        status: 201, 
-        description: 'Tạo đơn nghỉ phép thành công' 
+    @SwaggerApiResponse({
+        status: 201,
+        description: 'Tạo đơn nghỉ phép thành công'
     })
-    @SwaggerApiResponse({ 
-        status: 400, 
-        description: 'Dữ liệu không hợp lệ hoặc trùng lịch nghỉ' 
+    @SwaggerApiResponse({
+        status: 400,
+        description: 'Dữ liệu không hợp lệ hoặc trùng lịch nghỉ'
     })
     async createLeaveRequest(
         @Body() dto: CreateLeaveRequestDto,
@@ -55,18 +56,18 @@ export class LeaveRequestController {
     }
 
     @Get()
-    @ApiOperation({ 
-        summary: 'Lấy danh sách đơn nghỉ phép với bộ lọc', 
-        description: 'Lấy danh sách đơn nghỉ phép với khả năng tìm kiếm, lọc theo trạng thái, thời gian và phân trang' 
+    @ApiOperation({
+        summary: 'Lấy danh sách đơn nghỉ phép với bộ lọc',
+        description: 'Lấy danh sách đơn nghỉ phép với khả năng tìm kiếm, lọc theo trạng thái, thời gian và phân trang'
     })
     @ApiQuery({ name: 'status', required: false, description: 'Lọc theo trạng thái (PENDING, APPROVED, REJECTED)' })
     @ApiQuery({ name: 'startDateFrom', required: false, description: 'Ngày bắt đầu từ', type: Date })
     @ApiQuery({ name: 'startDateTo', required: false, description: 'Ngày bắt đầu đến', type: Date })
     @ApiQuery({ name: 'page', required: false, description: 'Số trang', type: Number })
     @ApiQuery({ name: 'pageSize', required: false, description: 'Số bản ghi mỗi trang', type: Number })
-    @SwaggerApiResponse({ 
-        status: 200, 
-        description: 'Lấy danh sách đơn nghỉ phép thành công' 
+    @SwaggerApiResponse({
+        status: 200,
+        description: 'Lấy danh sách đơn nghỉ phép thành công'
     })
     async getLeaveRequests(
         @Query() params: {
@@ -77,8 +78,8 @@ export class LeaveRequestController {
             pageSize?: number,
         },
     ): Promise<ApiResponse<PagedAndFilteredLeaveRequest>> {
-        try { 
-            
+        try {
+
             const leaveRequests = await this.leaveRequestService.findAllWithFilteredAndPaged(
                 params.status,
                 params.startDateFrom,
@@ -105,18 +106,18 @@ export class LeaveRequestController {
     }
 
     @Get('my')
-    @ApiOperation({ 
-        summary: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với bộ lọc', 
-        description: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với khả năng tìm kiếm, lọc theo trạng thái, thời gian và phân trang' 
+    @ApiOperation({
+        summary: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với bộ lọc',
+        description: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với khả năng tìm kiếm, lọc theo trạng thái, thời gian và phân trang'
     })
     @ApiQuery({ name: 'status', required: false, description: 'Lọc theo trạng thái (PENDING, APPROVED, REJECTED)' })
     @ApiQuery({ name: 'startDateFrom', required: false, description: 'Ngày bắt đầu từ', type: Date })
     @ApiQuery({ name: 'startDateTo', required: false, description: 'Ngày bắt đầu đến', type: Date })
     @ApiQuery({ name: 'page', required: false, description: 'Số trang', type: Number })
     @ApiQuery({ name: 'pageSize', required: false, description: 'Số bản ghi mỗi trang', type: Number })
-    @SwaggerApiResponse({ 
-        status: 200, 
-        description: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại thành công' 
+    @SwaggerApiResponse({
+        status: 200,
+        description: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại thành công'
     })
     async getMyLeaveRequests(
         @Query() params: {
@@ -130,6 +131,9 @@ export class LeaveRequestController {
     ): Promise<ApiResponse<PagedAndFilteredLeaveRequest>> {
         try {
             const userId = req.user.id;
+            if (!userId) {
+                throw new UnauthorizedException('User not authenticated');
+            }
             const leaveRequests = await this.leaveRequestService.findAllByUserIdWithFilteredAndPaged(
                 userId,
                 params.status,
@@ -157,9 +161,9 @@ export class LeaveRequestController {
     }
 
     @Patch(':id/status')
-    @ApiOperation({ 
-        summary: 'Cập nhật trạng thái đơn nghỉ phép', 
-        description: 'Phê duyệt hoặc từ chối đơn nghỉ phép. Chỉ có thể cập nhật đơn đang ở trạng thái PENDING.' 
+    @ApiOperation({
+        summary: 'Cập nhật trạng thái đơn nghỉ phép',
+        description: 'Phê duyệt hoặc từ chối đơn nghỉ phép. Chỉ có thể cập nhật đơn đang ở trạng thái PENDING.'
     })
     @ApiParam({ name: 'id', description: 'ID của đơn nghỉ phép' })
     @ApiBody({
@@ -179,17 +183,17 @@ export class LeaveRequestController {
             required: ['status']
         }
     })
-    @SwaggerApiResponse({ 
-        status: 200, 
-        description: 'Cập nhật trạng thái thành công' 
+    @SwaggerApiResponse({
+        status: 200,
+        description: 'Cập nhật trạng thái thành công'
     })
-    @SwaggerApiResponse({ 
-        status: 400, 
-        description: 'Không thể cập nhật trạng thái' 
+    @SwaggerApiResponse({
+        status: 400,
+        description: 'Không thể cập nhật trạng thái'
     })
-    @SwaggerApiResponse({ 
-        status: 404, 
-        description: 'Không tìm thấy đơn nghỉ phép' 
+    @SwaggerApiResponse({
+        status: 404,
+        description: 'Không tìm thấy đơn nghỉ phép'
     })
     async updateLeaveRequestStatus(
         @Param('id') id: string,
@@ -198,7 +202,7 @@ export class LeaveRequestController {
     ): Promise<ApiResponse<LeaveRequestResponse>> {
         try {
             const approverId = req.user.id;
-            
+
             if (!body.status) {
                 throw new BadRequestException('Status is required');
             }

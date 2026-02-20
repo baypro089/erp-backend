@@ -18,6 +18,15 @@ import { ResignationRequestModule } from './modules/resignation-request.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SystemSettingModule } from './modules/system-setting.module';
 import { SeedModule } from './seeds/seed.module';
+import { BrandModule } from './modules/brand.module';
+import { SupplierModule } from './modules/supplier.module';
+import { ProductModule } from './modules/product.module';
+import { CategoryModule } from './modules/category.module';
+import { WarehouseModule } from './modules/warehouse.module';
+import { ProductStockModule } from './modules/product-stock.module';
+import { ProductSerialModule } from './modules/product-serial.module';
+import { ImportReceiptModule } from './modules/import-receipt.module';
+import { CustomerModule } from './modules/customer.module';
 
 @Module({
   imports: [
@@ -37,6 +46,15 @@ import { SeedModule } from './seeds/seed.module';
     ResignationRequestModule,
     SystemSettingModule,
     SeedModule,
+    BrandModule,
+    SupplierModule,
+    CategoryModule,
+    ProductModule,
+    WarehouseModule,
+    ProductStockModule,
+    ProductSerialModule,
+    ImportReceiptModule,
+    CustomerModule,
 
     ConfigModule.forRoot({
       isGlobal: true, 

@@ -20,6 +20,7 @@ import { Gender } from '@libs/shared/enums/gender.enum';
 import { Level } from '@libs/shared/enums/level.enum';
 import { Status } from '@libs/shared/enums/employee-status.enum';
 import { ResignationRequest } from './resignation-request.entity';
+import { Warehouse } from './warehouse.entity';
 
 @Entity('employees')
 export class Employee {
@@ -122,4 +123,7 @@ export class Employee {
 
   @OneToMany(() => ResignationRequest, (resignationRequest) => resignationRequest.employee)
   resignationRequests: ResignationRequest[];
+
+  @OneToMany(() => Warehouse, (warehouse) => warehouse.manager)
+  managedWarehouses: Warehouse[];
 }

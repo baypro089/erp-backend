@@ -26,19 +26,17 @@ export class OrderDetail {
   @Column({ type: 'int' })
   quantity: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, name: 'unit_price' })
+  @Column({ type: 'decimal', precision: 15, scale: 2, name: 'unit_price' })
   unitPrice: number;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+  @Column({ type: 'decimal', precision: 15, scale: 2})
+  amount: number;
 
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
+  // Cực kỳ quan trọng: Khi Kho xuất hàng, họ sẽ quét các mã Serial vào đây
+  @Column('jsonb', { nullable: true })
+  assignedSerials: string[];
 
-  @DeleteDateColumn({ name: 'deleted_at' })
-  deletedAt: Date;
-
-  @ManyToOne(() => Order, (order) => order.orderDetails)
+  @ManyToOne(() => Order, (order) => order.items)
   @JoinColumn({ name: 'order_id' })
   order: Order;
 

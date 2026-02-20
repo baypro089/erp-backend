@@ -58,7 +58,7 @@ export class LeaveRequest {
   @JoinColumn({ name: 'employee_id' })
   employee: Employee;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, (user) => user.approvedLeaveRequests, { nullable: true })
   @JoinColumn({ name: 'approver_id' })
   approver: User;
 }

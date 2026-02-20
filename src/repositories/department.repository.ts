@@ -20,8 +20,12 @@ export class DepartmentRepository extends Repository<Department> {
             query.andWhere('unaccent(department.name) ILIKE unaccent(:name)', { name: `%${name}%` });
         }
 
+        query.orderBy('department.createdAt', 'DESC');
+
         if (page && pageSize) {
-            query.orderBy('department.createdAt', 'DESC').skip((page - 1) * pageSize).take(pageSize);
+            const pageNum = Number(page);
+            const pageSizeNum = Number(pageSize);
+            query.skip((pageNum - 1) * pageSizeNum).take(pageSizeNum);
         }
 
         const [items, total] = await query.getManyAndCount();

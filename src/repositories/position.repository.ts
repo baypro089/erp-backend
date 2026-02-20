@@ -27,9 +27,13 @@ export class PositionRepository extends Repository<Position> {
         if (maxSalary !== undefined) {
             query.andWhere('position.baseSalary <= :maxSalary', { maxSalary });
         }
+
+        query.orderBy('position.createdAt', 'DESC')
         
         if (page && pageSize) {
-            query.orderBy('position.createdAt', 'DESC').skip((page - 1) * pageSize).take(pageSize);
+            const pageNum = Number(page);
+            const pageSizeNum = Number(pageSize);
+            query.skip((pageNum - 1) * pageSizeNum).take(pageSizeNum);
         }
 
         const [items, total] = await query.getManyAndCount();
