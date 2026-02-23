@@ -27,6 +27,9 @@ import { ProductStockModule } from './modules/product-stock.module';
 import { ProductSerialModule } from './modules/product-serial.module';
 import { ImportReceiptModule } from './modules/import-receipt.module';
 import { CustomerModule } from './modules/customer.module';
+import { ReturnRequestModule } from './modules/return-request.module';
+import { OrderModule } from './modules/order.module';
+import { AttachmentModule } from './modules/attachment.module';
 
 @Module({
   imports: [
@@ -37,6 +40,7 @@ import { CustomerModule } from './modules/customer.module';
     AuthModule,
     RedisModule,
     FileModule,
+    AttachmentModule,
     DepartmentsModule,
     PositionsModule,
     JobHistoryModule,
@@ -55,6 +59,8 @@ import { CustomerModule } from './modules/customer.module';
     ProductSerialModule,
     ImportReceiptModule,
     CustomerModule,
+    OrderModule,
+    ReturnRequestModule,
 
     ConfigModule.forRoot({
       isGlobal: true, 

@@ -65,6 +65,7 @@ export class CustomerController {
         }
     }
 
+    // API 2: Tìm kiếm khách hàng theo số điện thoại
     @Get("phone/:phone")
     async findCustomerByPhone(@Param("phone") phone: string): Promise<ApiResponse<CustomerResponse>> {
         try {

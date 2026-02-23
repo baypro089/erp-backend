@@ -20,7 +20,7 @@ export class OrderRepository extends Repository<Order> {
     ): Promise<{ items: Order[], total: number }> {
         const queryBuilder = this.createQueryBuilder("order")
             .leftJoinAndSelect("order.customer", "customer")
-            .leftJoinAndSelect("order.createdByUser", "user");
+            .leftJoinAndSelect("order.creator", "user");
 
         if (status) {
             queryBuilder.andWhere("order.status = :status", { status });

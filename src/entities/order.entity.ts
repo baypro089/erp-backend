@@ -27,6 +27,9 @@ export class Order {
   @Column({ type: 'uuid', name: 'creator_id' })
   creatorId: string;
 
+  @Column({ type: 'decimal', precision: 15, scale: 2, default: 0, name: 'discount_amount' })
+  discountAmount: number; // Chiết khấu tổng (nếu có)
+
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0, name: 'total_amount' })
   totalAmount: number;
 
@@ -37,8 +40,14 @@ export class Order {
   })
   status: OrderStatus;
 
-  @Column({ type: 'varchar', length: 255, name: 'shipping_address' })
+  @Column({ type: 'varchar', length: 255, name: 'shipping_provider', nullable: true })
+  shippingProvider: string;
+
+  @Column({ type: 'varchar', length: 255, name: 'shipping_address', nullable: true })
   shippingAddress: string;
+
+  @Column({ type: 'varchar', length: 255, name: 'tracking_code', nullable: true })
+  trackingCode: string;
 
   @Column({ type: 'varchar', length: 1000, nullable: true })
   note: string;

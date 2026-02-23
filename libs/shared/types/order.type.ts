@@ -7,11 +7,14 @@ import { UserResponse } from "./users.type";
 export type OrderResponse = {
     id: string; 
     code: string;
+    discountAmount: number; // Chiết khấu tổng
     totalAmount: number;
     customer: CustomerResponse; 
     creator: UserResponse;
     status: OrderStatus;
-    shippingAddress: string;
+    shippingProvider?: string;
+    shippingAddress?: string;
+    trackingCode?: string;
     note?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -32,7 +35,10 @@ export type OrderListResponse = PagedResult<OrderTableReponse>;
 
 export type CreateOrderDto = {
     customerId: string;
+    discountAmount: number; // Chiết khấu tổng
+    shippingProvider?: string;
     shippingAddress?: string;
+    trackingCode?: string;
     note?: string;
     items: OrderItemDto[];
 }

@@ -25,7 +25,20 @@ export class CreateOrderDTO {
 
   @IsOptional()
   @IsString()
+  shippingProvider?: string;
+
+  @IsOptional()
+  @IsString()
   shippingAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  trackingCode?: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(0)
+  discountAmount: number; // Chiết khấu tổng
 
   @IsOptional()
   @IsString()

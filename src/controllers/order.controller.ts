@@ -6,11 +6,11 @@ import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { OrderResponse, OrderListResponse } from "@libs/shared/types/order.type";
 import { OrderStatus } from "@libs/shared/enums/order-status.enum";
-import { Controller, UseGuards, Post, Body, Param, Get, Query, Req, UnauthorizedException, NotFoundException } from "@nestjs/common";
+import { Controller, UseGuards, Post, Body, Param, Get, Query, Req, UnauthorizedException, NotFoundException, Patch } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 
 @ApiTags('orders')
-@Controller('commercial/orders')
+@Controller('orders')
 @UseGuards(JwtAuthGuard)
 export class OrderController {
   constructor(private readonly service: OrderService) { }
@@ -56,6 +56,34 @@ export class OrderController {
       );
     } catch (error) {
       console.error('Error in fulfill order:', error);
+      throw error;
+    }
+  }
+
+  // API 3: Cập nhật trạng thái đơn hàng (dành cho Sale và Kho) nếu hủy đơn đã xuất hàng thì phải có warehouseId để trả hàng về kho
+  @Patch(':id/status')
+  async updateStatus(
+    @Req() req: any,
+    @Param('id') orderId: string,
+    @Body() body: { status: OrderStatus; warehouseIdToReturn?: string }
+  ): Promise<ApiResponse<OrderResponse>> {
+    try {
+      const userId = req.user.id;
+      if (!userId) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      const result = await this.service.updateOrderStatus(
+        userId,
+        orderId,
+        body.status,
+        body.warehouseIdToReturn
+      );
+      return ResponseHelper.send(
+        OrderMapper.toResponse(result),
+        'Cập nhật trạng thái đơn hàng thành công'
+      );
+    } catch (error) {
+      console.error('Error in update order status:', error);
       throw error;
     }
   }
