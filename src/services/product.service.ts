@@ -6,6 +6,8 @@ import { createHash } from 'crypto';
 import { DataSource } from "typeorm";
 import { Category } from "@/entities/category.entity";
 import { Brand } from "@/entities/brand.entity";
+import { AttachmentFolder } from "@libs/shared/enums/attachment.enum";
+import { AttachmentService } from "./attachment.service";
 
 @Injectable()
 export class ProductService {
@@ -14,6 +16,7 @@ export class ProductService {
         private readonly productRepository: ProductRepository,
         private readonly dataSource: DataSource,
         private readonly redisService: RedisService,
+        private readonly attachmentService: AttachmentService
     ) { }
 
     async findAllFilteredAndPaged(
@@ -49,7 +52,7 @@ export class ProductService {
         return this.productRepository.findOne({ where: { id }, relations: ["category", "brand"] });
     }
 
-    async createProduct(productData: Partial<Product>): Promise<Product> {
+    async createProduct(productData: Partial<Product>, thumbnailFile?: Express.Multer.File): Promise<Product> {
         const category = await this.dataSource.getRepository(Category).findOne({ where: { id: productData.categoryId } });
         if (!category) {
             throw new NotFoundException("Category not found");
@@ -58,21 +61,42 @@ export class ProductService {
         if (!brand) {
             throw new NotFoundException("Brand not found");
         }
+
+        // Tạo product trước
         const product = this.productRepository.create({
             ...productData,
             category,
             brand,
         });
-        const result = await this.productRepository.save(product);
+
+        const savedProduct = await this.productRepository.save(product);
+
+        // Upload thumbnail nếu có
+        if (thumbnailFile) {
+            const attachment = await this.attachmentService.uploadFile(thumbnailFile, {
+                folder: AttachmentFolder.PRODUCTS,
+                entityType: 'product',
+                entityId: savedProduct.id,
+                description: 'Product thumbnail',
+                tags: ['thumbnail', 'product-image'],
+            });
+
+            // Lưu attachment ID để generate URL qua view/:id
+            savedProduct.thumbnailUrl = attachment.id;
+            await this.productRepository.save(savedProduct);
+        }
+
         await this.redisService.delByPrefix('products:');
-        return result;
+        return savedProduct;
     }
 
-    async updateProduct(id: string, updateData: Partial<Product>): Promise<Product> {
+    async updateProduct(id: string, updateData: Partial<Product>, thumbnailFile?: Express.Multer.File): Promise<Product> {
         const product = await this.productRepository.findOne({ where: { id } });
         if (!product) {
             throw new NotFoundException("Product not found");
         }
+
+        // Cập nhật category nếu có
         if (updateData.categoryId) {
             const category = await this.dataSource.getRepository(Category).findOne({ where: { id: updateData.categoryId } });
             if (!category) {
@@ -80,6 +104,8 @@ export class ProductService {
             }
             product.category = category;
         }
+
+        // Cập nhật brand nếu có
         if (updateData.brandId) {
             const brand = await this.dataSource.getRepository(Brand).findOne({ where: { id: updateData.brandId } });
             if (!brand) {
@@ -87,6 +113,28 @@ export class ProductService {
             }
             product.brand = brand;
         }
+
+        // Thay đổi ảnh nếu có file mới
+        if (thumbnailFile) {
+            // Xóa ảnh cũ
+            const oldAttachments = await this.attachmentService.findByEntity('product', id);
+            if (oldAttachments.length > 0) {
+                await this.attachmentService.deleteMultiple(oldAttachments.map(a => a.id));
+            }
+
+            // Upload ảnh mới
+            const attachment = await this.attachmentService.uploadFile(thumbnailFile, {
+                folder: AttachmentFolder.PRODUCTS,
+                entityType: 'product',
+                entityId: id,
+                description: 'Product thumbnail',
+                tags: ['thumbnail', 'product-image'],
+            });
+
+            // Lưu attachment ID để generate URL qua view/:id
+            product.thumbnailUrl = attachment.id;
+        }
+
         Object.assign(product, updateData);
         const result = await this.productRepository.save(product);
         await this.redisService.delByPrefix('products:');
@@ -97,7 +145,25 @@ export class ProductService {
         if (ids.length === 0) {
             throw new NotFoundException("No product IDs provided for deletion");
         }
+
+        // Xóa tất cả attachments trước
+        for (const productId of ids) {
+            const attachments = await this.attachmentService.findByEntity('product', productId);
+            if (attachments.length > 0) {
+                await this.attachmentService.deleteMultiple(attachments.map(a => a.id));
+            }
+        }
+
+        // Xóa products
         await this.productRepository.delete(ids);
         await this.redisService.delByPrefix('products:');
+    }
+
+    /**
+     * Lấy ảnh thumbnail của product (trả về entity để controller dùng mapper)
+     */
+    async getProductThumbnail(productId: string) {
+        const attachments = await this.attachmentService.findByEntityRaw('product', productId);
+        return attachments.find(a => a.tags?.includes('thumbnail')) || null;
     }
 }

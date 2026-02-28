@@ -3,6 +3,7 @@ import { EmployeeResponse, EmployeeTableResponse } from '@libs/shared/types/empl
 import { UsersMapper } from './users.mapper';
 import { DepartmentsMapper } from './departments.mapper';
 import { PositionsMapper } from './positions.mapper';
+import { buildPublicUrl } from '@libs/core/helpers/url.helper';
 
 export class EmployeesMapper {
   static toResponse(employee: Employee): EmployeeResponse {
@@ -20,7 +21,8 @@ export class EmployeesMapper {
       addressCurrent: employee.addressCurrent || undefined,
       nationality: employee.nationality || undefined,
       employeeCode: employee.employeeCode,
-      photoUrl: employee.photo || undefined,
+      photoUrl: buildPublicUrl(employee.photo) || undefined,
+      cvUrl: buildPublicUrl(employee.cvUrl) || undefined,
       startDate: employee.startDate,
       department:employee.department ? DepartmentsMapper.toResponse(employee.department) : undefined,
       currentPosition: employee.currentPosition ? PositionsMapper.toResponse(employee.currentPosition) : undefined,

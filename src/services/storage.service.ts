@@ -107,14 +107,14 @@ export class LocalStorageProvider implements IStorageProvider {
       // Xác định loại file
       const type = this.getFileType(file.mimetype);
 
-      // Return result
+      // Return result (chỉ trả relative path, không trả full URL)
       return {
         path: `${folder}/${fileName}`,
         originalName: file.originalname,
         size: file.size,
         mimeType: file.mimetype,
         type,
-        publicUrl: this.getPublicUrl(`${folder}/${fileName}`),
+        publicUrl: undefined, // Không lưu full URL vào DB, sẽ generate khi cần
       };
     } catch (error) {
       if (error instanceof BadRequestException) {

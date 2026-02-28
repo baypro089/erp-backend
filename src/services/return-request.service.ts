@@ -27,12 +27,12 @@ export class ReturnService {
         private redisService: RedisService,
     ) { }
 
-    async processReturn(userId: string, dto: CreateReturnDTO): Promise<ReturnRequest> {
+    async processReturn(userId: string, dto: CreateReturnDTO): Promise<ReturnRequest | null> {
         return this.dataSource.transaction(async (manager) => {
             // 1. Kiểm tra đơn hàng gốc
             const order = await manager.findOne(Order, {
                 where: { id: dto.orderId },
-                relations: ['customer']
+                relations: ['customer', 'items', 'items.product', 'creator', 'creator.role']
             });
             if (!order) throw new NotFoundException('Không tìm thấy đơn hàng gốc');
 
@@ -49,6 +49,12 @@ export class ReturnService {
             for (const itemDto of dto.items) {
                 const product = await manager.findOne(Product, { where: { id: itemDto.productId } });
                 if (!product) throw new NotFoundException('Sản phẩm không tồn tại');
+
+                // Tìm xem sản phẩm này có thực sự nằm trong đơn hàng gốc không
+                const orderItem = order.items.find(i => i.product.id === product.id);
+                if (!orderItem) {
+                    throw new BadRequestException(`Sản phẩm ${product.name} không nằm trong đơn hàng gốc!`);
+                }
 
                 totalRefund += (itemDto.refundPrice || 0) * itemDto.quantity;
 
@@ -77,6 +83,17 @@ export class ReturnService {
                         await manager.save(serial);
                     }
                 }
+                else {
+                    // Ràng buộc quan trọng nhất: Số lượng khách trả KHÔNG ĐƯỢC LỚN HƠN số lượng khách đã mua
+                    if (itemDto.quantity > orderItem.quantity) {
+                        throw new BadRequestException(
+                            `Khách hàng chỉ mua ${orderItem.quantity} sản phẩm ${product.name}, không thể trả ${itemDto.quantity}!`
+                        );
+                    }
+
+                    // Xóa mảng Serial rác (nếu FE vô tình gửi lên)
+                    itemDto.returnedSerials = [];
+                }
 
                 // B. CẬP NHẬT TỒN KHO VẬT LÝ (Tăng tồn kho ở Kho Nhận - Kho Lỗi)
                 let stock = await manager.findOne(ProductStock, {
@@ -92,6 +109,13 @@ export class ReturnService {
                 }
                 stock.quantity += itemDto.quantity;
                 await manager.save(stock);
+
+                // Update product's total stockQuantity from all warehouses
+                const totalStock = await manager.createQueryBuilder(ProductStock, 'ps')
+                    .where('ps.productId = :productId', { productId: product.id })
+                    .select('SUM(ps.quantity)', 'total')
+                    .getRawOne();
+                await manager.update(Product, product.id, { stockQuantity: totalStock?.total || 0 });
 
                 // C. GHI THẺ KHO (Lịch sử)
                 const history = manager.create(StockHistory, {
@@ -139,10 +163,29 @@ export class ReturnService {
 
             const savedReturnRequest = await manager.save(returnRequest);
 
+            // Load lại với đầy đủ relations để trả về response
+            const fullReturnRequest = await manager.findOne(ReturnRequest, {
+                where: { id: savedReturnRequest.id },
+                relations: [
+                    'order',
+                    'order.creator',
+                    'order.creator.role',
+                    'order.customer',
+                    'customer',
+                    'warehouse',
+                    'creator',
+                    'creator.role',
+                    'items',
+                    'items.product',
+                    'items.product.category',
+                    'items.product.brand'
+                ]
+            });
+
             // 6. Invalidate cache sau khi tạo return request mới
             await this.redisService.delByPrefix(this.CACHE_PREFIX);
 
-            return savedReturnRequest;
+            return fullReturnRequest;
         });
     }
 
@@ -172,7 +215,21 @@ export class ReturnService {
     async getReturnRequestById(id: string): Promise<ReturnRequest> {
         const returnRequest = await this.returnRequestRepository.findOne({
             where: { id },
-            relations: ['order', 'customer', 'warehouse', 'creator', 'items', 'items.product']
+            relations: [
+                'order',
+                'order.customer',
+                'order.creator',
+                'order.creator.role',
+                'customer',
+                'warehouse',
+                'creator',
+                'creator.role',
+                'creator.employee',
+                'items',
+                'items.product',
+                'items.product.category',
+                'items.product.brand'
+            ]
         });
         if (!returnRequest) {
             throw new NotFoundException('Không tìm thấy phiếu trả hàng');

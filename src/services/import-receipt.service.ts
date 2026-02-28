@@ -74,6 +74,7 @@ export class ImportReceiptService {
             const request = importReceiptRepo.create({
                 code: `PN-${Date.now()}-${randomSuffix}`,
                 warehouse: { id: dto.warehouseId },
+                supplier: dto.supplierId ? { id: dto.supplierId } : undefined,
                 createdByUser: { id: userId },
                 status: ReceiptStatus.COMPLETED,
                 totalPrice: totalAmount,
@@ -86,7 +87,7 @@ export class ImportReceiptService {
             // Load relations trước khi xử lý stock
             const fullRequest = await importReceiptRepo.findOne({
                 where: { id: savedRequest.id },
-                relations: ['items', 'items.product', 'warehouse', 'createdByUser', 'createdByUser.role', 'items.product.category', 'items.product.brand']
+                relations: ['items', 'items.product', 'warehouse', 'supplier', 'createdByUser', 'createdByUser.role', 'items.product.category', 'items.product.brand']
             });
 
             if (!fullRequest) {
@@ -95,6 +96,8 @@ export class ImportReceiptService {
 
             // --- CHẠY LOGIC NHẬP KHO ---
             await this.executeStockIn(manager, fullRequest);
+
+            
 
             // Invalidate related caches (list / filtered queries)
             await this.redisService.delByPrefix('import_receipts:');
@@ -126,6 +129,15 @@ export class ImportReceiptService {
             }
             stock.quantity += item.quantity;
             await productStockRepo.save(stock);
+
+            // Update product's total stockQuantity from all warehouses
+            const productRepo = manager.getRepository(Product);
+            const totalStock = await productStockRepo
+                .createQueryBuilder('ps')
+                .where('ps.productId = :productId', { productId: item.product.id })
+                .select('SUM(ps.quantity)', 'total')
+                .getRawOne();
+            await productRepo.update(item.product.id, { stockQuantity: totalStock?.total || 0 });
 
             // B. Ghi Lịch sử (StockHistory)
             const history = stockHistoryRepo.create({

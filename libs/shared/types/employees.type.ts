@@ -19,6 +19,7 @@ export type EmployeeResponse = {
   nationality?: string;
   dateOfBirth?: Date;
   photoUrl?: string;
+  cvUrl?: string;
   employeeCode: string;
   startDate: Date;
   level?: Level;
@@ -55,6 +56,7 @@ export type UpdateEmployeeDto = {
   nationality?: string;
   dateOfBirth?: Date;
   photoUrl?: string;
+  cvUrl?: string;
   level?: Level;
   departmentId?: string;
   currentPositionId?: string;

@@ -181,6 +181,16 @@ export class UpdateEmployeeDto {
   @MaxLength(255)
   photoUrl?: string;
 
+  @ApiProperty({
+    example: 'https://storage.example.com/cvs/employee_cv.pdf',
+    description: 'URL lưu trữ CV (VD: https://storage.example.com/cvs/uuid.pdf)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cvUrl?: string; // URL lưu trữ CV (VD: https://storage.example.com/cvs/uuid.pdf)
+
   @ApiProperty({ 
     example: 'EMP002', 
     description: 'Mã nhân viên',

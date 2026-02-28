@@ -345,12 +345,19 @@ export class PayslipService {
     }
 
     async getMyPayslips(
-        employeeId: string,
+        userId: string,
         month?: number,
         year?: number,
         page?: number,
         pageSize?: number
     ): Promise<{ items: Payslip[], total: number }> {
+        const employee = await this.employeeRepository.findOne({
+            where: { user: { id: userId } }
+        });
+        if (!employee) {
+            throw new NotFoundException('Employee not found for user');
+        }
+        const employeeId = employee.id;
         const cacheKey = `my_payslips:${employeeId}:${month || 'all'}:${year || 'all'}:${page || 'all'}:${pageSize || 'all'}`;
         const cached = await this.redisService.get<{ items: Payslip[], total: number }>(cacheKey);
         if (cached) {
@@ -372,5 +379,46 @@ export class PayslipService {
             throw new NotFoundException('Payslip not found');
         }
         return payslip;
+    }
+
+    async getYearlyPayslipsForEmployee(
+        userId: string,
+        year: number
+    ): Promise<{ details: Payslip[], totalSalary: number, totalBaseSalary: number }> {
+        const employee = await this.employeeRepository.findOne({
+            where: { user: { id: userId } }
+        });
+
+        if (!employee) {
+            throw new NotFoundException('Employee not found for user');
+        }
+
+        const yearlyData = await this.payslipRepository.createQueryBuilder('payslip')
+            .select('SUM(payslip.finalSalary)', 'totalSalary')
+            .addSelect('SUM(payslip.baseSalary)', 'totalBaseSalary')
+            .where('payslip.employee_id = :empId', { empId: employee.id })
+            .andWhere('payslip.year = :year', { year })
+            .andWhere('payslip.isPaid = true') // Chỉ tính lương đã thanh toán
+            .getRawOne();
+
+        if (!yearlyData || !yearlyData.totalNetSalary) {
+            throw new NotFoundException(`Chưa có dữ liệu lương năm ${year}`);
+        }
+
+        const monthlyDetails = await this.payslipRepository.find({
+            where: {
+                employee: { id: employee.id },
+                year,
+                isPaid: true // Chỉ lấy những tháng đã thanh toán
+            },
+            relations: ['employee', 'employee.department', 'employee.currentPosition'],
+            order: { month: 'ASC' }
+        });
+
+        return {
+            details: monthlyDetails,
+            totalSalary: yearlyData.totalSalary || 0,
+            totalBaseSalary: yearlyData.totalBaseSalary || 0
+        };
     }
 }

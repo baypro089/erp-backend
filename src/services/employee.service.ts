@@ -2,9 +2,11 @@ import { CreateEmployeeDto } from "@/dtos/employees.dto";
 import { Employee } from "@/entities/employee.entity";
 import { EmployeeRepository } from "@/repositories/employee.repository";
 import { EmployeeResponse, PagedAndFilteredEmployee } from "@libs/shared/types/employees.type";
+import { AttachmentFolder } from "@libs/shared/enums/attachment.enum";
 import { Injectable, Inject } from "@nestjs/common";
 import { createHash } from 'crypto';
 import { RedisService } from "./redis.service";
+import { AttachmentService } from "./attachment.service";
 import { DepartmentRepository } from "@/repositories/department.repository";
 import { PositionRepository } from "@/repositories/position.repository";
 import { DataSource, In } from "typeorm";
@@ -23,6 +25,7 @@ export class EmployeeService {
         private readonly positionRepository: PositionRepository,
         private readonly dataSource: DataSource,
         private readonly redisService: RedisService,
+        private readonly attachmentService: AttachmentService,
     ) { }
 
     async getAllEmployees(permissionPortal?: string): Promise<Employee[]> {
@@ -199,7 +202,10 @@ export class EmployeeService {
         });
     }
 
-    async updateEmployee(id: string, employeeData: Partial<Employee>): Promise<Employee | null> {
+    async updateEmployee(
+        id: string, 
+        employeeData: Partial<Employee>,
+    ): Promise<Employee | null> {
         if (employeeData.departmentId) {
             const department = await this.departmentRepository.findById(employeeData.departmentId);
             if (!department) {
@@ -221,10 +227,107 @@ export class EmployeeService {
         return updatedEmployee;
     }
 
+    /**
+     * Upload hoặc cập nhật ảnh của nhân viên
+     */
+    async updateEmployeePhoto(
+        employeeId: string,
+        photoFile: Express.Multer.File,
+    ): Promise<Employee | null> {
+        // Lấy attachment ID cũ trước khi upload
+        const employee = await this.employeeRepository.findById(employeeId);
+        if (!employee) {
+            throw new Error(`Employee not found: ${employeeId}`);
+        }
+        const oldPhotoId = employee.photo || null;
+
+        // Upload ảnh mới trước
+        const photoAttachment = await this.attachmentService.uploadFile(photoFile, {
+            folder: AttachmentFolder.EMPLOYEES,
+            entityType: 'employee',
+            entityId: employeeId,
+            description: 'Employee photo',
+            tags: ['photo', 'employee-avatar'],
+        });
+
+        // Cập nhật DB với attachment ID mới
+        const updatedEmployee = await this.employeeRepository.updateEmployee(employeeId, { photo: photoAttachment.id });
+
+        // Xóa ảnh cũ SAU KHI lưu thành công
+        if (oldPhotoId) {
+            await this.attachmentService.hardDelete(oldPhotoId);
+        }
+
+        await this.redisService.delByPrefix('employees:');
+        await this.redisService.delByPrefix('all_employees:');
+        return updatedEmployee;
+    }
+
+    /**
+     * Upload hoặc cập nhật CV của nhân viên
+     */
+    async updateEmployeeCV(
+        employeeId: string,
+        cvFile: Express.Multer.File,
+    ): Promise<Employee | null> {
+        // Lấy attachment ID cũ trước khi upload
+        const employee = await this.employeeRepository.findById(employeeId);
+        if (!employee) {
+            throw new Error(`Employee not found: ${employeeId}`);
+        }
+        const oldCvId = employee.cvUrl || null;
+
+        // Upload CV mới trước
+        const cvAttachment = await this.attachmentService.uploadFile(cvFile, {
+            folder: AttachmentFolder.EMPLOYEES,
+            entityType: 'employee',
+            entityId: employeeId,
+            description: 'Employee CV',
+            tags: ['cv', 'employee-cv'],
+        });
+
+        // Cập nhật DB với attachment ID mới
+        const updatedEmployee = await this.employeeRepository.updateEmployee(employeeId, { cvUrl: cvAttachment.id });
+
+        // Xóa CV cũ SAU KHI lưu thành công
+        if (oldCvId) {
+            await this.attachmentService.hardDelete(oldCvId);
+        }
+
+        await this.redisService.delByPrefix('employees:');
+        await this.redisService.delByPrefix('all_employees:');
+        return updatedEmployee;
+    }
+
+    /**
+     * Get employee photo attachment (trả về entity để controller dùng mapper)
+     */
+    async getEmployeePhoto(employeeId: string) {
+        const attachments = await this.attachmentService.findByEntityRaw('employee', employeeId);
+        return attachments.find(a => a.tags?.includes('photo')) || null;
+    }
+
+    /**
+     * Get employee CV attachment (trả về entity để controller dùng mapper)
+     */
+    async getEmployeeCV(employeeId: string) {
+        const attachments = await this.attachmentService.findByEntityRaw('employee', employeeId);
+        return attachments.find(a => a.tags?.includes('cv')) || null;
+    }
+
     async deleteEmployees(ids: string[]): Promise<void> {
         if (!ids || ids.length === 0) {
             return;
         }
+
+        // Delete attachments first
+        for (const employeeId of ids) {
+            const attachments = await this.attachmentService.findByEntity('employee', employeeId);
+            if (attachments.length > 0) {
+                await this.attachmentService.deleteMultiple(attachments.map(a => a.id));
+            }
+        }
+
         await this.employeeRepository.deleteEmployees(ids);
         await this.redisService.delByPrefix('employees:');
         await this.redisService.delByPrefix('all_employees:');

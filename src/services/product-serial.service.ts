@@ -28,7 +28,7 @@ export class ProductSerialService {
     async getSerialByNumber(serialNumber: string): Promise<ProductSerial | null> {
         const serial =  this.productSerialRepository.findOne({
             where: { serialNumber },
-            relations: ['product', 'warehouse'],
+            relations: ['product', 'warehouse', 'product.category', 'product.brand'],
         });
         if (!serial) {
             throw new NotFoundException(`Serial number ${serialNumber} not found`);

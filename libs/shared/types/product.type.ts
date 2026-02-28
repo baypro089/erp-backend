@@ -27,6 +27,7 @@ export type ProductTableResponse = {
     brandName: string;
     retailPrice: number;
     stockQuantity: number;
+    thumbnailUrl?: string;
     isActive: boolean;
 }
 

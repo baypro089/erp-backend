@@ -1,10 +1,25 @@
 import { ProductMapper } from "@/mappers/product.mapper";
+import { AttachmentMapper } from "@/mappers/attachment.mapper";
 import { ProductService } from "@/services/product.service";
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { PagedAndFilteredProduct, ProductResponse } from "@libs/shared/types/product.type";
-import { Controller, Get, Param, Query, Body, Post, Put, Delete, NotFoundException } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { AttachmentResponse } from "@libs/shared/types/attachment.type";
+import { 
+    Controller, 
+    Get, 
+    Param, 
+    Query, 
+    Body, 
+    Post, 
+    Put, 
+    Delete, 
+    NotFoundException,
+    UseInterceptors,
+    UploadedFile 
+} from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiTags, ApiConsumes, ApiBody } from "@nestjs/swagger";
 
 @ApiTags("products")
 @Controller("products")
@@ -68,9 +83,34 @@ export class ProductController {
     }
 
     @Post()
-    async createProduct(@Body() productData: Partial<any>): Promise<ApiResponse<ProductResponse>> {
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                sku: { type: 'string' },
+                name: { type: 'string' },
+                categoryId: { type: 'string' },
+                brandId: { type: 'string' },
+                retailPrice: { type: 'number' },
+                warrantyMonths: { type: 'string' },
+                hasSerialNumber: { type: 'boolean' },
+                specifications: { type: 'object' },
+                thumbnail: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Ảnh thumbnail sản phẩm',
+                },
+            },
+        },
+    })
+    @UseInterceptors(FileInterceptor('thumbnail'))
+    async createProduct(
+        @Body() productData: Partial<any>,
+        @UploadedFile() thumbnail?: Express.Multer.File,
+    ): Promise<ApiResponse<ProductResponse>> {
         try {
-            const created = await this.productService.createProduct(productData as any);
+            const created = await this.productService.createProduct(productData, thumbnail);
             return ResponseHelper.send(ProductMapper.toResponse(created), 'Create product successfully.');
         } catch (error) {
             console.error('Error in createProduct:', error);
@@ -79,9 +119,35 @@ export class ProductController {
     }
 
     @Put(":id")
-    async updateProduct(@Param("id") id: string, @Body() updateData: Partial<any>): Promise<ApiResponse<ProductResponse>> {
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                sku: { type: 'string' },
+                name: { type: 'string' },
+                categoryId: { type: 'string' },
+                brandId: { type: 'string' },
+                retailPrice: { type: 'number' },
+                warrantyMonths: { type: 'string' },
+                hasSerialNumber: { type: 'boolean' },
+                specifications: { type: 'object' },
+                thumbnail: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Ảnh thumbnail sản phẩm mới (nếu muốn thay đổi)',
+                },
+            },
+        },
+    })
+    @UseInterceptors(FileInterceptor('thumbnail'))
+    async updateProduct(
+        @Param("id") id: string,
+        @Body() updateData: Partial<any>,
+        @UploadedFile() thumbnail?: Express.Multer.File,
+    ): Promise<ApiResponse<ProductResponse>> {
         try {
-            const updated = await this.productService.updateProduct(id, updateData as any);
+            const updated = await this.productService.updateProduct(id, updateData, thumbnail);
             return ResponseHelper.send(ProductMapper.toResponse(updated), 'Update product successfully.');
         } catch (error) {
             console.error('Error in updateProduct:', error);
@@ -96,6 +162,21 @@ export class ProductController {
             return ResponseHelper.send(null, 'Delete product successfully.');
         } catch (error) {
             console.error('Error in removeProducts:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Lấy ảnh thumbnail của product
+     */
+    @Get(':id/thumbnail')
+    async getProductThumbnail(@Param('id') id: string): Promise<ApiResponse<AttachmentResponse | null>> {
+        try {
+            const thumbnail = await this.productService.getProductThumbnail(id);
+            const response = thumbnail ? AttachmentMapper.toResponse(thumbnail) : null;
+            return ResponseHelper.send(response, 'Get product thumbnail successfully.');
+        } catch (error) {
+            console.error('Error in getProductThumbnail:', error);
             throw error;
         }
     }

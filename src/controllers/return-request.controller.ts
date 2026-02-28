@@ -26,6 +26,9 @@ export class ReturnRequestController {
         throw new UnauthorizedException('User not authenticated');
       }
       const result = await this.service.processReturn(userId, dto);
+      if (!result) {
+        throw new NotFoundException('Không thể tạo phiếu trả hàng');
+      }
       return ResponseHelper.send(
         ReturnRequestMapper.toResponse(result),
         'Xử lý trả hàng thành công'

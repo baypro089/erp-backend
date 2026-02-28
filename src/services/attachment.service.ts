@@ -11,9 +11,14 @@ import {
   UploadFileDTO,
   UpdateAttachmentDTO,
   QueryAttachmentDTO,
-  AttachmentResponseDTO,
 } from '@/dtos/attachment.dto';
+import {
+  AttachmentResponse,
+  UploadAttachmentDto,
+  UpdateAttachmentDto,
+} from '@libs/shared/types/attachment.type';
 import { AttachmentStatus } from '@libs/shared/enums/attachment.enum';
+import { AttachmentMapper } from '@/mappers/attachment.mapper';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -29,8 +34,8 @@ export class AttachmentService {
    */
   async uploadFile(
     file: Express.Multer.File,
-    dto: UploadFileDTO,
-  ): Promise<AttachmentResponseDTO> {
+    dto: UploadAttachmentDto | UploadFileDTO,
+  ): Promise<AttachmentResponse> {
     try {
       // Upload file lên storage
       const uploadResult = await this.storageProvider.upload(file, dto.folder);
@@ -50,12 +55,12 @@ export class AttachmentService {
         description: dto.description,
         tags: dto.tags,
         metadata: dto.metadata,
-        publicUrl: uploadResult.publicUrl,
+        // publicUrl: null - Không lưu vào DB, sẽ generate khi response
       });
 
       const savedAttachment = await this.attachmentRepository.save(attachment);
 
-      return this.toResponseDTO(savedAttachment);
+      return AttachmentMapper.toResponse(savedAttachment);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -74,13 +79,13 @@ export class AttachmentService {
    */
   async uploadMultipleFiles(
     files: Express.Multer.File[],
-    dto: UploadFileDTO,
-  ): Promise<AttachmentResponseDTO[]> {
+    dto: UploadAttachmentDto | UploadFileDTO,
+  ): Promise<AttachmentResponse[]> {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files provided');
     }
 
-    const results: AttachmentResponseDTO[] = [];
+    const results: AttachmentResponse[] = [];
 
     // Upload từng file
     for (const file of files) {
@@ -101,7 +106,7 @@ export class AttachmentService {
    */
   async findAll(
     query: QueryAttachmentDTO,
-  ): Promise<{ items: AttachmentResponseDTO[]; total: number }> {
+  ): Promise<{ items: AttachmentResponse[]; total: number }> {
     const { items, total } =
       await this.attachmentRepository.findAllFilteredAndPaged(
         query.type,
@@ -116,7 +121,7 @@ export class AttachmentService {
       );
 
     return {
-      items: items.map((item) => this.toResponseDTO(item)),
+      items: AttachmentMapper.toResponseList(items),
       total,
     };
   }
@@ -124,7 +129,7 @@ export class AttachmentService {
   /**
    * Tìm attachment theo ID
    */
-  async findOne(id: string): Promise<AttachmentResponseDTO> {
+  async findOne(id: string): Promise<AttachmentResponse> {
     const attachment = await this.attachmentRepository.findOne({
       where: { id },
     });
@@ -133,22 +138,32 @@ export class AttachmentService {
       throw new NotFoundException('Attachment not found');
     }
 
-    return this.toResponseDTO(attachment);
+    return AttachmentMapper.toResponse(attachment);
   }
 
   /**
-   * Tìm tất cả attachment của một entity
+   * Tìm tất cả attachment của một entity (trả về response)
    */
   async findByEntity(
     entityType: string,
     entityId: string,
-  ): Promise<AttachmentResponseDTO[]> {
+  ): Promise<AttachmentResponse[]> {
     const attachments = await this.attachmentRepository.findByEntity(
       entityType,
       entityId,
     );
 
-    return attachments.map((item) => this.toResponseDTO(item));
+    return AttachmentMapper.toResponseList(attachments);
+  }
+
+  /**
+   * Tìm tất cả attachment của một entity (trả về entity gốc cho mapper ở controller)
+   */
+  async findByEntityRaw(
+    entityType: string,
+    entityId: string,
+  ): Promise<Attachment[]> {
+    return this.attachmentRepository.findByEntity(entityType, entityId);
   }
 
   /**
@@ -156,8 +171,8 @@ export class AttachmentService {
    */
   async update(
     id: string,
-    dto: UpdateAttachmentDTO,
-  ): Promise<AttachmentResponseDTO> {
+    dto: UpdateAttachmentDto | UpdateAttachmentDTO,
+  ): Promise<AttachmentResponse> {
     const attachment = await this.attachmentRepository.findOne({
       where: { id },
     });
@@ -189,7 +204,7 @@ export class AttachmentService {
     const updatedAttachment =
       await this.attachmentRepository.save(attachment);
 
-    return this.toResponseDTO(updatedAttachment);
+    return AttachmentMapper.toResponse(updatedAttachment);
   }
 
   /**
@@ -206,6 +221,27 @@ export class AttachmentService {
 
     if (attachment.status !== AttachmentStatus.ACTIVE) {
       throw new BadRequestException('Attachment is not available');
+    }
+
+    const buffer = await this.storageProvider.read(attachment.path);
+
+    return { buffer, attachment };
+  }
+
+  /**
+   * Đọc file bằng path (relative path)
+   */
+  async readFileByPath(relativePath: string): Promise<{ buffer: Buffer; attachment: Attachment }> {
+    const attachment = await this.attachmentRepository.findOne({
+      where: { path: relativePath },
+    });
+
+    if (!attachment) {
+      throw new NotFoundException('File not found');
+    }
+
+    if (attachment.status !== AttachmentStatus.ACTIVE) {
+      throw new BadRequestException('File is not available');
     }
 
     const buffer = await this.storageProvider.read(attachment.path);
@@ -266,7 +302,7 @@ export class AttachmentService {
    */
   async deleteMultiple(ids: string[]): Promise<void> {
     for (const id of ids) {
-      await this.softDelete(id);
+      await this.hardDelete(id);
     }
   }
 
@@ -294,27 +330,8 @@ export class AttachmentService {
   /**
    * Convert entity to response DTO
    */
-  private toResponseDTO(attachment: Attachment): AttachmentResponseDTO {
-    return {
-      id: attachment.id,
-      originalName: attachment.originalName,
-      path: attachment.path,
-      mimeType: attachment.mimeType,
-      size: attachment.size,
-      type: attachment.type,
-      folder: attachment.folder,
-      status: attachment.status,
-      entityType: attachment.entityType,
-      entityId: attachment.entityId,
-      uploadedBy: attachment.uploadedBy,
-      description: attachment.description,
-      tags: attachment.tags,
-      metadata: attachment.metadata,
-      publicUrl: attachment.publicUrl,
-      thumbnailPath: attachment.thumbnailPath,
-      createdAt: attachment.createdAt,
-      updatedAt: attachment.updatedAt,
-    };
+  private toResponseDTO(attachment: Attachment): AttachmentResponse {
+    return AttachmentMapper.toResponse(attachment);
   }
 
   /**
@@ -324,14 +341,14 @@ export class AttachmentService {
     attachmentId: string,
     entityType: string,
     entityId: string,
-  ): Promise<AttachmentResponseDTO> {
+  ): Promise<AttachmentResponse> {
     return this.update(attachmentId, { entityType, entityId });
   }
 
   /**
    * Hủy liên kết attachment với entity
    */
-  async unlinkFromEntity(attachmentId: string): Promise<AttachmentResponseDTO> {
+  async unlinkFromEntity(attachmentId: string): Promise<AttachmentResponse> {
     return this.update(attachmentId, {
       entityType: undefined,
       entityId: undefined,

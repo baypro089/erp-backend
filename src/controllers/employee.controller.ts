@@ -1,11 +1,13 @@
 import { EmployeeService } from "@/services/employee.service";
-import { EmployeeResponse, PagedAndFilteredEmployee } from "@libs/shared/types/employees.type";
-import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Query, UploadedFile, UseInterceptors, Param } from "@nestjs/common";
 import { EmployeesMapper } from "@/mappers/employees.mapper";
+import { AttachmentMapper } from "@/mappers/attachment.mapper";
+import { EmployeeResponse, PagedAndFilteredEmployee } from "@libs/shared/types/employees.type";
+import { AttachmentResponse } from "@libs/shared/types/attachment.type";
+import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Query, UploadedFile, UploadedFiles, UseInterceptors, Param } from "@nestjs/common";
 import { Employee } from "@/entities/employee.entity";
 import { ResponseHelper } from '@libs/core/helpers/response.helper';
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
-import { FileInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FileFieldsInterceptor } from "@nestjs/platform-express";
 import { FileService } from "@/services/file.service";
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { CreateEmployeeDto, UpdateEmployeeDto } from "@/dtos/employees.dto";
@@ -180,7 +182,7 @@ export class EmployeeController {
 
 
     @Put('/:id')
-    @ApiOperation({ summary: 'Cập nhật nhân viên', description: 'Cập nhật thông tin nhân viên' })
+    @ApiOperation({ summary: 'Cập nhật nhân viên', description: 'Cập nhật thông tin nhân viên (không bao gồm ảnh và CV)' })
     @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
     @ApiBody({ type: UpdateEmployeeDto, description: 'Thông tin nhân viên cần cập nhật' })
     @SwaggerApiResponse({ status: 200, description: 'Cập nhật nhân viên thành công' })
@@ -194,6 +196,124 @@ export class EmployeeController {
             return ResponseHelper.send(EmployeesMapper.toResponse(updatedEmployee as Employee));
         } catch (error) {
             console.error('Error in updateEmployee:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Upload hoặc cập nhật ảnh của nhân viên
+     */
+    @Put('/:id/photo')
+    @ApiOperation({ summary: 'Upload/Cập nhật ảnh nhân viên', description: 'Upload hoặc thay đổi ảnh của nhân viên' })
+    @ApiConsumes('multipart/form-data')
+    @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                photo: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Ảnh nhân viên',
+                },
+            },
+        },
+    })
+    @UseInterceptors(FileInterceptor('photo'))
+    @SwaggerApiResponse({ status: 200, description: 'Upload ảnh thành công' })
+    @SwaggerApiResponse({ status: 404, description: 'Không tìm thấy nhân viên' })
+    async updateEmployeePhoto(
+        @Param('id') id: string,
+        @UploadedFile() photo: Express.Multer.File,
+    ): Promise<ApiResponse<EmployeeResponse>> {
+        try {
+            if (!photo) {
+                throw new BadRequestException('Photo file is required');
+            }
+            const updatedEmployee = await this.employeeService.updateEmployeePhoto(id, photo);
+            return ResponseHelper.send(
+                EmployeesMapper.toResponse(updatedEmployee as Employee),
+                'Upload employee photo successfully.',
+            );
+        } catch (error) {
+            console.error('Error in updateEmployeePhoto:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Upload hoặc cập nhật CV của nhân viên
+     */
+    @Put('/:id/cv')
+    @ApiOperation({ summary: 'Upload/Cập nhật CV nhân viên', description: 'Upload hoặc thay đổi CV của nhân viên' })
+    @ApiConsumes('multipart/form-data')
+    @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                cv: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'CV của nhân viên (PDF, DOC, DOCX)',
+                },
+            },
+        },
+    })
+    @UseInterceptors(FileInterceptor('cv'))
+    @SwaggerApiResponse({ status: 200, description: 'Upload CV thành công' })
+    @SwaggerApiResponse({ status: 404, description: 'Không tìm thấy nhân viên' })
+    async updateEmployeeCV(
+        @Param('id') id: string,
+        @UploadedFile() cv: Express.Multer.File,
+    ): Promise<ApiResponse<EmployeeResponse>> {
+        try {
+            if (!cv) {
+                throw new BadRequestException('CV file is required');
+            }
+            const updatedEmployee = await this.employeeService.updateEmployeeCV(id, cv);
+            return ResponseHelper.send(
+                EmployeesMapper.toResponse(updatedEmployee as Employee),
+                'Upload employee CV successfully.',
+            );
+        } catch (error) {
+            console.error('Error in updateEmployeeCV:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Lấy ảnh của nhân viên
+     */
+    @Get('/:id/photo')
+    @ApiOperation({ summary: 'Lấy ảnh nhân viên', description: 'Lấy thông tin ảnh của nhân viên' })
+    @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
+    @SwaggerApiResponse({ status: 200, description: 'Lấy ảnh nhân viên thành công' })
+    async getEmployeePhoto(@Param('id') id: string): Promise<ApiResponse<AttachmentResponse | null>> {
+        try {
+            const photo = await this.employeeService.getEmployeePhoto(id);
+            const response = photo ? AttachmentMapper.toResponse(photo) : null;
+            return ResponseHelper.send(response, 'Get employee photo successfully.');
+        } catch (error) {
+            console.error('Error in getEmployeePhoto:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Lấy CV của nhân viên
+     */
+    @Get('/:id/cv')
+    @ApiOperation({ summary: 'Lấy CV nhân viên', description: 'Lấy thông tin CV của nhân viên' })
+    @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
+    @SwaggerApiResponse({ status: 200, description: 'Lấy CV nhân viên thành công' })
+    async getEmployeeCV(@Param('id') id: string): Promise<ApiResponse<AttachmentResponse | null>> {
+        try {
+            const cv = await this.employeeService.getEmployeeCV(id);
+            const response = cv ? AttachmentMapper.toResponse(cv) : null;
+            return ResponseHelper.send(response, 'Get employee CV successfully.');
+        } catch (error) {
+            console.error('Error in getEmployeeCV:', error);
             throw error;
         }
     }

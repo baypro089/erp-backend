@@ -1,4 +1,3 @@
-
 import {
   Column,
   CreateDateColumn,
@@ -81,4 +80,10 @@ export class Product {
 
   @OneToMany(() => StockHistory, (stockHistory) => stockHistory.product)
   stockHistories: StockHistory[];
+
+  get availableStock(): number {
+    const stocks = this.productStocks || [];
+    
+    return stocks.reduce((total, s) => total + (s.quantity || 0), 0);
+  }
 }

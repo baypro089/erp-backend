@@ -30,8 +30,8 @@ import {
   UploadFileDTO,
   UpdateAttachmentDTO,
   QueryAttachmentDTO,
-  AttachmentResponseDTO,
 } from '@/dtos/attachment.dto';
+import { AttachmentResponse } from '@libs/shared/types/attachment.type';
 import { ResponseHelper } from '@libs/core/helpers/response.helper';
 import { ApiResponse } from '@libs/core/interfaces/apiResponse.interface';
 
@@ -101,7 +101,7 @@ export class AttachmentController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadFileDTO,
-  ): Promise<ApiResponse<AttachmentResponseDTO>> {
+  ): Promise<ApiResponse<AttachmentResponse>> {
     if (!file) {
       throw new BadRequestException('File is required');
     }
@@ -152,7 +152,7 @@ export class AttachmentController {
   async uploadMultipleFiles(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: UploadFileDTO,
-  ): Promise<ApiResponse<AttachmentResponseDTO[]>> {
+  ): Promise<ApiResponse<AttachmentResponse[]>> {
     if (!files || files.length === 0) {
       throw new BadRequestException('Files are required');
     }
@@ -177,32 +177,20 @@ export class AttachmentController {
   @ApiQuery({ name: 'pageSize', required: false, description: 'Số item/trang' })
   async findAll(
     @Query() query: QueryAttachmentDTO,
-  ): Promise<ApiResponse<{ items: AttachmentResponseDTO[]; total: number }>> {
+  ): Promise<ApiResponse<{ items: AttachmentResponse[]; total: number }>> {
     const result = await this.attachmentService.findAll(query);
     return ResponseHelper.send(result, 'Get attachments successfully');
   }
 
   /**
-   * Lấy thông tin attachment theo ID
-   */
-  @Get(':id')
-  @ApiOperation({ summary: 'Lấy thông tin attachment theo ID' })
-  async findOne(
-    @Param('id') id: string,
-  ): Promise<ApiResponse<AttachmentResponseDTO>> {
-    const result = await this.attachmentService.findOne(id);
-    return ResponseHelper.send(result, 'Get attachment successfully');
-  }
-
-  /**
-   * Xem/Download file
+   * Xem/Download file by ID
+   * ĐẶT TRƯỚC @Get(':id') để tránh bị override
    */
   @Get('view/:id')
-  @ApiOperation({ summary: 'Xem hoặc download file' })
+  @ApiOperation({ summary: 'Xem hoặc download file theo ID' })
   async viewFile(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     const { buffer, attachment } = await this.attachmentService.readFile(id);
 
-    // Set headers
     res.set({
       'Content-Type': attachment.mimeType,
       'Content-Disposition': `inline; filename="${encodeURIComponent(attachment.originalName)}"`,
@@ -214,6 +202,7 @@ export class AttachmentController {
 
   /**
    * Download file
+   * ĐẶT TRƯỚC @Get(':id') để tránh bị override
    */
   @Get('download/:id')
   @ApiOperation({ summary: 'Download file' })
@@ -223,7 +212,6 @@ export class AttachmentController {
   ) {
     const { buffer, attachment } = await this.attachmentService.readFile(id);
 
-    // Set headers cho download
     res.set({
       'Content-Type': attachment.mimeType,
       'Content-Disposition': `attachment; filename="${encodeURIComponent(attachment.originalName)}"`,
@@ -235,15 +223,29 @@ export class AttachmentController {
 
   /**
    * Lấy danh sách attachment của một entity
+   * ĐẶT TRƯỚC @Get(':id') để tránh bị override
    */
   @Get('entity/:entityType/:entityId')
   @ApiOperation({ summary: 'Lấy danh sách attachment của entity' })
   async findByEntity(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
-  ): Promise<ApiResponse<AttachmentResponseDTO[]>> {
+  ): Promise<ApiResponse<AttachmentResponse[]>> {
     const result = await this.attachmentService.findByEntity(entityType, entityId);
     return ResponseHelper.send(result, 'Get attachments successfully');
+  }
+
+  /**
+   * Lấy thông tin attachment theo ID
+   * ĐẶT SAU tất cả static routes
+   */
+  @Get(':id')
+  @ApiOperation({ summary: 'Lấy thông tin attachment theo ID' })
+  async findOne(
+    @Param('id') id: string,
+  ): Promise<ApiResponse<AttachmentResponse>> {
+    const result = await this.attachmentService.findOne(id);
+    return ResponseHelper.send(result, 'Get attachment successfully');
   }
 
   /**
@@ -254,7 +256,7 @@ export class AttachmentController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateAttachmentDTO,
-  ): Promise<ApiResponse<AttachmentResponseDTO>> {
+  ): Promise<ApiResponse<AttachmentResponse>> {
     const result = await this.attachmentService.update(id, dto);
     return ResponseHelper.send(result, 'Update attachment successfully');
   }
@@ -277,7 +279,7 @@ export class AttachmentController {
   async linkToEntity(
     @Param('id') id: string,
     @Body() body: { entityType: string; entityId: string },
-  ): Promise<ApiResponse<AttachmentResponseDTO>> {
+  ): Promise<ApiResponse<AttachmentResponse>> {
     const result = await this.attachmentService.linkToEntity(id, body.entityType, body.entityId);
     return ResponseHelper.send(result, 'Link attachment successfully');
   }
@@ -289,7 +291,7 @@ export class AttachmentController {
   @ApiOperation({ summary: 'Hủy liên kết attachment với entity' })
   async unlinkFromEntity(
     @Param('id') id: string,
-  ): Promise<ApiResponse<AttachmentResponseDTO>> {
+  ): Promise<ApiResponse<AttachmentResponse>> {
     const result = await this.attachmentService.unlinkFromEntity(id);
     return ResponseHelper.send(result, 'Unlink attachment successfully');
   }

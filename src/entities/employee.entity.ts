@@ -68,6 +68,9 @@ export class Employee {
   @Column({ length: 50, name: 'employee_code', unique: true })
   employeeCode: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'cv_url' })
+  cvUrl: string; // URL lưu trữ CV (VD: https://storage.example.com/cvs/uuid.pdf)
+
   @Column({ name: 'start_date' })
   startDate: Date;
 

@@ -30,6 +30,11 @@ import { CustomerModule } from './modules/customer.module';
 import { ReturnRequestModule } from './modules/return-request.module';
 import { OrderModule } from './modules/order.module';
 import { AttachmentModule } from './modules/attachment.module';
+import { AdminStatisticModule } from './modules/admin-statistic.module';
+import { HrStatisticModule } from './modules/hr-statistic.module';
+import { HrReportModule } from './modules/hr-report.module';
+import { SalesStatisticModule } from './modules/sales-statistic.module';
+import { WarehouseReportModule } from './modules/warehouse-report.module';
 
 @Module({
   imports: [
@@ -61,6 +66,11 @@ import { AttachmentModule } from './modules/attachment.module';
     CustomerModule,
     OrderModule,
     ReturnRequestModule,
+    AdminStatisticModule,
+    HrStatisticModule,
+    HrReportModule,
+    SalesStatisticModule,
+    WarehouseReportModule,
 
     ConfigModule.forRoot({
       isGlobal: true, 

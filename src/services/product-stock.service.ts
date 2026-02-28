@@ -57,6 +57,13 @@ export class ProductStockService {
         stock.quantity += delta;
         await manager.save(stock);
 
+        // Update product's total stockQuantity from all warehouses
+        const totalStock = await manager.createQueryBuilder(ProductStock, 'ps')
+            .where('ps.productId = :productId', { productId })
+            .select('SUM(ps.quantity)', 'total')
+            .getRawOne();
+        await manager.update(Product, productId, { stockQuantity: totalStock?.total || 0 });
+
         // 4. Ghi Thẻ kho (Log)
         const history = manager.create(StockHistory, {
             warehouse: { id: warehouseId },

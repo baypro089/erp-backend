@@ -12,6 +12,7 @@ import { DepartmentRepository } from '@/repositories/department.repository';
 import { PositionRepository } from '@/repositories/position.repository';
 import { EmployeeService } from '@/services/employee.service';
 import { EmployeeController } from '@/controllers/employee.controller';
+import { AttachmentModule } from './attachment.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EmployeeController } from '@/controllers/employee.controller';
       LeaveRequest,
       Payslip,
     ]),
+    AttachmentModule,
   ],
   controllers: [EmployeeController],
   providers: [

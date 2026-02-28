@@ -180,6 +180,13 @@ export class OrderService {
                 stock.quantity -= orderItem.quantity;
                 await manager.save(stock);
 
+                // Update product's total stockQuantity from all warehouses
+                const totalStock = await manager.createQueryBuilder(ProductStock, 'ps')
+                    .where('ps.productId = :productId', { productId: orderItem.product.id })
+                    .select('SUM(ps.quantity)', 'total')
+                    .getRawOne();
+                await manager.update(Product, orderItem.product.id, { stockQuantity: totalStock?.total || 0 });
+
                 // C. GHI THẺ KHO (Stock History)
                 const history = manager.create(StockHistory, {
                     warehouse: { id: dto.warehouseId },
@@ -280,6 +287,13 @@ export class OrderService {
                     }
                     stock.quantity += item.quantity;
                     await manager.save(stock);
+
+                    // Update product's total stockQuantity from all warehouses
+                    const totalStock = await manager.createQueryBuilder(ProductStock, 'ps')
+                        .where('ps.productId = :productId', { productId: item.product.id })
+                        .select('SUM(ps.quantity)', 'total')
+                        .getRawOne();
+                    await manager.update(Product, item.product.id, { stockQuantity: totalStock?.total || 0 });
 
                     // C. Ghi Thẻ kho
                     const history = manager.create(StockHistory, {

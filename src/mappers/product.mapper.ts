@@ -2,6 +2,7 @@ import { Product } from "@/entities/product.entity";
 import { ProductResponse, ProductTableResponse } from "@libs/shared/types/product.type";
 import { CategoryMapper } from "./category.mapper";
 import { BrandMapper } from "./brand.mapper";
+import { buildPublicUrl } from "@libs/core/helpers/url.helper";
 
 export class ProductMapper {
     static toResponse(entity: Product): ProductResponse {
@@ -16,14 +17,14 @@ export class ProductMapper {
             warrantyMonths: entity.warrantyMonths,
             hasSerialNumber: entity.hasSerialNumber,
             specifications: entity.specifications,
-            thumbnailUrl: entity.thumbnailUrl,
+            thumbnailUrl: buildPublicUrl(entity.thumbnailUrl), // Convert relative path to full URL
             isActive: entity.isActive,
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt,
         }
     }
 
-    static toResonseTable(entity: Product): ProductTableResponse {
+    static toResponseTable(entity: Product): ProductTableResponse {
         return {
             id: entity.id,
             sku: entity.sku,
@@ -32,11 +33,12 @@ export class ProductMapper {
             brandName: entity.brand.name,
             retailPrice: entity.retailPrice,
             stockQuantity: entity.stockQuantity,
+            thumbnailUrl: buildPublicUrl(entity.thumbnailUrl), // Convert relative path to full URL
             isActive: entity.isActive,
         }
     }
 
     static toResponseTableList(entities: Product[]): ProductTableResponse[] {
-        return entities.map(entity => this.toResonseTable(entity));
+        return entities.map(entity => this.toResponseTable(entity));
     }
 }
