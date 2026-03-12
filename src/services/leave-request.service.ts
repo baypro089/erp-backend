@@ -10,8 +10,9 @@ import { Employee } from "@/entities/employee.entity";
 import { calculateWorkingDays } from "@/utils/date.util";
 import { User } from "@/entities/user.entity";
 import { Holiday } from "@/entities/holiday.entity";
-import { Role } from "@/entities/role.entity";
+import { Department } from "@/entities/department.entity";
 import { PORTAL_PERMISSIONS } from "@libs/shared/constants/portal-permissions.constant";
+import { EMPLOYEE_PERMISSIONS } from "@libs/shared/constants/permissions.constant";
 
 @Injectable()
 export class LeaveRequestService {
@@ -20,6 +21,13 @@ export class LeaveRequestService {
         private readonly dataSource: DataSource,
         private readonly redisService: RedisService,
     ) { }
+
+    // Tính toán số ngày làm việc dựa trên database
+    async calculateWorkingDays(startDate: Date, endDate: Date): Promise<number> {
+        const holidayRepo = this.dataSource.getRepository(Holiday);
+        const dbHolidays = await holidayRepo.find();
+        return calculateWorkingDays(startDate, endDate, dbHolidays.map(h => h.date));
+    }
 
     // 1. Tạo đơn nghỉ phép
     async create(userId: string, dto: CreateLeaveRequestDto): Promise<LeaveRequest> {
@@ -48,20 +56,82 @@ export class LeaveRequestService {
                 throw new BadRequestException('You have selected only holidays/weekends, no need to create a leave request.');
             }
 
+            // Khởi tạo repository sớm để dùng trong logic auto-split
+            const leaveRepo = manager.getRepository(LeaveRequest);
+
             // CHECK QUỸ PHÉP NĂM
             if (dto.type === LeaveRequestType.ANNUAL) {
                 const remaining = employee.totalAnnualLeave - employee.usedAnnualLeave;
 
                 if (remaining < duration) {
+                    // Nếu không đủ quỹ phép năm
+                    if (remaining <= 0) {
+                        // Không còn phép năm nào
+                        throw new BadRequestException(
+                            `❌ Bạn đã hết phép năm (Còn lại: 0 ngày).\n` +
+                            `📌 Giải pháp: Vui lòng chọn loại nghỉ "Không lương" (UNPAID) để tiếp tục.`
+                        );
+                    }
+
+                    // Kiểm tra flag auto-split
+                    if (dto.autoSplitIfInsufficient) {
+                        // AUTO-SPLIT: Tạo 2 đơn tự động
+                        const unpaidDays = duration - remaining;
+
+                        // 1. Tạo đơn phép năm với số ngày còn lại
+                        const annualRequest = leaveRepo.create({
+                            ...dto,
+                            employee,
+                            duration: remaining,
+                            type: LeaveRequestType.ANNUAL,
+                            reason: dto.reason + ` [Phần 1/${remaining} ngày phép năm]`,
+                            status: LeaveRequestStatus.PENDING,
+                        });
+                        await leaveRepo.save(annualRequest);
+
+                        // 2. Tạo đơn không lương cho phần dư
+                        const unpaidRequest = leaveRepo.create({
+                            ...dto,
+                            employee,
+                            duration: unpaidDays,
+                            type: LeaveRequestType.UNPAID,
+                            reason: dto.reason + ` [Phần 2/${unpaidDays} ngày không lương]`,
+                            status: LeaveRequestStatus.PENDING,
+                        });
+                        await leaveRepo.save(unpaidRequest);
+
+                        // Clear cache
+                        await this.redisService.delByPrefix(`leave_requests:`);
+                        await this.redisService.delByPrefix(`employees:`);
+                        await this.redisService.delByPrefix(`my_leave_requests:`);
+
+                        // Trả về đơn phép năm (frontend sẽ cần reload để thấy cả 2 đơn)
+                        return annualRequest;
+                    }
+
+                    // Nếu không dùng auto-split, báo lỗi chi tiết
+                    const unpaidDays = duration - remaining;
                     throw new BadRequestException(
-                        `Bạn không đủ phép năm! Số dư: ${remaining} ngày. Vui lòng chọn loại nghỉ "Không lương".`
+                        `❌ Không đủ quỹ phép năm!\n\n` +
+                        `📊 Thông tin chi tiết:\n` +
+                        `   • Tổng phép năm: ${employee.totalAnnualLeave} ngày\n` +
+                        `   • Đã sử dụng: ${employee.usedAnnualLeave} ngày\n` +
+                        `   • Còn lại: ${remaining} ngày\n` +
+                        `   • Bạn đang yêu cầu: ${duration} ngày\n` +
+                        `   • Thiếu: ${unpaidDays} ngày\n\n` +
+                        `✅ Giải pháp 1 (Khuyến nghị):\n` +
+                        `   Tạo 2 đơn riêng biệt:\n` +
+                        `   1️⃣ Đơn Phép năm: ${remaining} ngày (từ ${dto.startDate})\n` +
+                        `   2️⃣ Đơn Không lương: ${unpaidDays} ngày (tiếp theo)\n\n` +
+                        `✅ Giải pháp 2 (Tự động):\n` +
+                        `   Gửi lại request với flag "autoSplitIfInsufficient": true\n` +
+                        `   Hệ thống sẽ tự động tách thành 2 đơn cho bạn.`
                     );
                 }
             }
 
             // B. Kiểm tra trùng lịch (Overlap Check) - QUAN TRỌNG
             // Logic: Tìm xem có đơn nào (Pending hoặc Approved) dính vào khoảng thời gian này không
-            const leaveRepo = manager.getRepository(LeaveRequest);
             const overlap = await leaveRepo.createQueryBuilder('leave_requests')
                 .where('leave_requests.employeeId = :empId', { empId: employee.id })
                 .andWhere('leave_requests.status IN (:...statuses)',
@@ -94,19 +164,49 @@ export class LeaveRequestService {
     }
 
     async findAllWithFilteredAndPaged(
+        userId: string,
         status?: string,
         startDateFrom?: Date,
         startDateTo?: Date,
         page?: number,
         pageSize?: number,
     ): Promise<{ items: LeaveRequest[], total: number }> {
+        let departmentId: string | undefined = undefined;
+        const user = await this.dataSource.getRepository(User).findOne({
+            where: { id: userId },
+            relations: ['employee', 'role', 'role.permissions'],
+        });
+        if (!user) throw new BadRequestException(`User not found: ${userId}`);
 
+        const permissions = user.role?.permissions ?? [];
+        const isAdmin = permissions.some(p => p.permission_code === PORTAL_PERMISSIONS.ADMIN);
+        const isHR = permissions.some(p => p.permission_code === EMPLOYEE_PERMISSIONS.CREATE);
+
+        if (!isAdmin && !isHR) {
+            if (user.employee) {
+                // Manager: chỉ được xem phòng ban mình quản lý
+                const managedDepartment = await this.dataSource.getRepository(Department)
+                    .findOne({ where: { managerId: user.employee.id } });
+                if (!managedDepartment) {
+                    // Nhân viên thường: không trả về dữ liệu
+                    return { items: [], total: 0 };
+                }
+                departmentId = managedDepartment.id;
+            } else {
+                return { items: [], total: 0 };
+            }
+        }
+        // isAdmin hoặc isHR: departmentId = undefined → xem tất cả phòng ban
+        const effectivePage = page || 1;
+        const effectivePageSize = pageSize || 10;
         const rawKey = JSON.stringify({
+            userId,
             status,
             startDateFrom,
             startDateTo,
-            page: page || 1,
-            pageSize: pageSize || 10,
+            departmentId,
+            page: effectivePage,
+            pageSize: effectivePageSize,
         });
         const cacheKey = `leave_requests:${createHash('md5').update(rawKey).digest('hex')}`;
         const cachedResult = await this.redisService.get<{ items: LeaveRequest[]; total: number }>(cacheKey);
@@ -117,11 +217,12 @@ export class LeaveRequestService {
             status,
             startDateFrom,
             startDateTo,
-            page,
-            pageSize,
+            effectivePage,
+            effectivePageSize,
+            departmentId,
         );
 
-        await this.redisService.set(cacheKey, result, 300); // Cache for 5 minutes
+        await this.redisService.set(cacheKey, result, 300);
         return result;
     }
 
@@ -230,10 +331,24 @@ export class LeaveRequestService {
                     );
                 }
 
-                // Trừ quỹ - cập nhật trực tiếp, log giá trị để debug
-                const before = employee.usedAnnualLeave;
-                employee.usedAnnualLeave += leaveRequest.duration;
+                // Trừ quỹ - ép kiểu Number để tránh lỗi cộng chuỗi (VD: 11 + "1" = "111")
+                const before = Number(employee.usedAnnualLeave);
+                const duration = Number(leaveRequest.duration);
+                
+                employee.usedAnnualLeave = before + duration;
+                
                 const after = employee.usedAnnualLeave;
+                console.log(`Trừ phép năm cho Employee ID ${employee.id}: ${before} -> ${after} (thêm ${duration} ngày)`);
+
+                // ⚠️ DOUBLE-CHECK: Đảm bảo không bao giờ vượt quá tổng phép năm
+                if (employee.usedAnnualLeave > employee.totalAnnualLeave) {
+                    throw new BadRequestException(
+                        `🚨 BẢO VỆ: Phát hiện việc trừ phép sẽ tạo ra số dư âm! ` +
+                        `(Used: ${after}, Total: ${employee.totalAnnualLeave}). ` +
+                        `Điều này không bao giờ xảy ra trong logic bình thường.`
+                    );
+                }
+
                 await manager.save(employee);
             }
 

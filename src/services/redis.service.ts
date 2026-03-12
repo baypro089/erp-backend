@@ -61,4 +61,32 @@ export class RedisService implements OnModuleDestroy {
     async ttl(key: string): Promise<number> {
         return this.redis.ttl(key);
     }
+
+    /**
+     * Xóa toàn bộ cache dữ liệu nghiệp vụ, giữ nguyên các key xác thực
+     * (refresh_token:*, otp:*, banned:*).
+     * Dùng cho endpoint "Refresh cache" ở frontend.
+     */
+    async flushAllDataCache(): Promise<void> {
+        const EXCLUDED_PREFIXES = ['refresh_token:', 'otp:', 'banned:'];
+
+        let cursor = '0';
+        const keysToDelete: string[] = [];
+
+        do {
+            const [nextCursor, keys] = await this.redis.scan(cursor, 'COUNT', 100);
+            cursor = nextCursor;
+
+            for (const key of keys) {
+                const isAuth = EXCLUDED_PREFIXES.some((prefix) => key.startsWith(prefix));
+                if (!isAuth) {
+                    keysToDelete.push(key);
+                }
+            }
+        } while (cursor !== '0');
+
+        if (keysToDelete.length > 0) {
+            await this.redis.del(keysToDelete);
+        }
+    }
 }

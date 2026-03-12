@@ -34,6 +34,8 @@ import {
 import { AttachmentResponse } from '@libs/shared/types/attachment.type';
 import { ResponseHelper } from '@libs/core/helpers/response.helper';
 import { ApiResponse } from '@libs/core/interfaces/apiResponse.interface';
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('attachments')
 @ApiBearerAuth('access-token')
@@ -45,6 +47,7 @@ export class AttachmentController {
    * Upload một file
    */
   @Post('upload')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.CREATE)
   @ApiOperation({ summary: 'Upload một file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -114,6 +117,7 @@ export class AttachmentController {
    * Upload nhiều file
    */
   @Post('upload-multiple')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.CREATE)
   @ApiOperation({ summary: 'Upload nhiều file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -165,6 +169,7 @@ export class AttachmentController {
    * Lấy danh sách attachment với filter và phân trang
    */
   @Get()
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.VIEW)
   @ApiOperation({ summary: 'Lấy danh sách attachment' })
   @ApiQuery({ name: 'type', required: false, description: 'Loại file' })
   @ApiQuery({ name: 'folder', required: false, description: 'Thư mục' })
@@ -187,6 +192,7 @@ export class AttachmentController {
    * ĐẶT TRƯỚC @Get(':id') để tránh bị override
    */
   @Get('view/:id')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.VIEW)
   @ApiOperation({ summary: 'Xem hoặc download file theo ID' })
   async viewFile(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     const { buffer, attachment } = await this.attachmentService.readFile(id);
@@ -205,6 +211,7 @@ export class AttachmentController {
    * ĐẶT TRƯỚC @Get(':id') để tránh bị override
    */
   @Get('download/:id')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.VIEW)
   @ApiOperation({ summary: 'Download file' })
   async downloadFile(
     @Param('id') id: string,
@@ -226,6 +233,7 @@ export class AttachmentController {
    * ĐẶT TRƯỚC @Get(':id') để tránh bị override
    */
   @Get('entity/:entityType/:entityId')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.VIEW)
   @ApiOperation({ summary: 'Lấy danh sách attachment của entity' })
   async findByEntity(
     @Param('entityType') entityType: string,
@@ -240,6 +248,7 @@ export class AttachmentController {
    * ĐẶT SAU tất cả static routes
    */
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.VIEW)
   @ApiOperation({ summary: 'Lấy thông tin attachment theo ID' })
   async findOne(
     @Param('id') id: string,
@@ -252,6 +261,7 @@ export class AttachmentController {
    * Cập nhật thông tin attachment
    */
   @Put(':id')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.UPDATE)
   @ApiOperation({ summary: 'Cập nhật thông tin attachment' })
   async update(
     @Param('id') id: string,
@@ -265,6 +275,7 @@ export class AttachmentController {
    * Liên kết attachment với entity
    */
   @Put(':id/link')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.UPDATE)
   @ApiOperation({ summary: 'Liên kết attachment với entity' })
   @ApiBody({
     schema: {
@@ -288,6 +299,7 @@ export class AttachmentController {
    * Hủy liên kết attachment với entity
    */
   @Put(':id/unlink')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.UPDATE)
   @ApiOperation({ summary: 'Hủy liên kết attachment với entity' })
   async unlinkFromEntity(
     @Param('id') id: string,
@@ -300,6 +312,7 @@ export class AttachmentController {
    * Xóa attachment (soft delete)
    */
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.DELETE)
   @ApiOperation({ summary: 'Xóa attachment (soft delete)' })
   async softDelete(@Param('id') id: string): Promise<ApiResponse<void>> {
     await this.attachmentService.softDelete(id);
@@ -310,6 +323,7 @@ export class AttachmentController {
    * Xóa vĩnh viễn attachment (hard delete)
    */
   @Delete(':id/permanent')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.DELETE)
   @ApiOperation({ summary: 'Xóa vĩnh viễn attachment (hard delete)' })
   async hardDelete(@Param('id') id: string): Promise<ApiResponse<void>> {
     await this.attachmentService.hardDelete(id);
@@ -320,6 +334,7 @@ export class AttachmentController {
    * Xóa nhiều attachment
    */
   @Delete('batch/delete')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.DELETE)
   @ApiOperation({ summary: 'Xóa nhiều attachment' })
   @ApiBody({
     schema: {
@@ -344,6 +359,7 @@ export class AttachmentController {
    * Đếm số lượng attachment của entity
    */
   @Get('entity/:entityType/:entityId/count')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.VIEW)
   @ApiOperation({ summary: 'Đếm số lượng attachment của entity' })
   async countByEntity(
     @Param('entityType') entityType: string,
@@ -357,6 +373,7 @@ export class AttachmentController {
    * Lấy tổng dung lượng file của user
    */
   @Get('user/:userId/total-size')
+  @RequirePermissions(PERMISSIONS.ATTACHMENT.VIEW)
   @ApiOperation({ summary: 'Lấy tổng dung lượng file của user' })
   async getTotalSizeByUser(
     @Param('userId') userId: string,

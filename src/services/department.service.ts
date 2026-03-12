@@ -4,6 +4,8 @@ import { DepartmentRepository } from "@/repositories/department.repository";
 import { Injectable } from "@nestjs/common";
 import { createHash } from 'crypto';
 import { RedisService } from "./redis.service";
+import { DataSource } from "typeorm";
+import { Employee } from "@/entities/employee.entity";
 
 
 @Injectable()
@@ -11,6 +13,7 @@ export class DepartmentService {
     // Define your service methods for department operations here
     constructor(
         private readonly departmentRepository: DepartmentRepository,
+        private readonly dataSource: DataSource,
         private readonly redisService: RedisService,
     ) { }
 
@@ -64,6 +67,16 @@ export class DepartmentService {
     }
 
     async updateDepartment(id: string, departmentData: Partial<Department>): Promise<Department | null> {
+        if (departmentData.managerId) {
+            const managerOccupiesDepartment = await this.departmentRepository.findOne({ where: { managerId: departmentData.managerId } });
+            if (managerOccupiesDepartment && managerOccupiesDepartment.id !== id) {
+                throw new Error(`Manager with ID ${departmentData.managerId} already manages a department`);
+            }
+            const employeeBelongsDepartment = await this.dataSource.getRepository(Employee).findOne({ where: { id: departmentData.managerId, departmentId: id } });
+            if (!employeeBelongsDepartment) {
+                throw new Error(`Employee with ID ${departmentData.managerId} is not an employee in this department, so they cannot be assigned as manager`);
+            }
+        }
         const updatedDepartment = await this.departmentRepository.updateDepartment(id, departmentData);
         await this.redisService.delByPrefix('departments:'); // Invalidate related caches
         await this.redisService.del('all_departments'); // Invalidate all departments cache

@@ -1,21 +1,22 @@
 import { ManagerReportFilterDTO } from "@/dtos/manager-report-filter.dto";
-import { JwtAuthGuard } from "@/guards/auth.guard";
 import { PayslipsMapper } from "@/mappers/payslips.mapper";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 import { HrReportService } from "@/services/hr-report.service";
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { IManagerReport } from "@libs/shared/types/manager-report.type";
-import { Controller, UseGuards, Get, Query } from "@nestjs/common";
+import { Controller, Get, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 
 @ApiTags('hr-reports')
 @Controller('hr/reports')
-@UseGuards(JwtAuthGuard)
 export class HrReportController {
     constructor(private readonly service: HrReportService) { }
 
     // API: Lấy báo cáo quản lý (Manager Report)
     @Get('manager')
+    @RequirePermissions(PERMISSIONS.HR_REPORT.VIEW)
     async getManagerReport(
         @Query() filter: ManagerReportFilterDTO
     ): Promise<ApiResponse<IManagerReport>> {

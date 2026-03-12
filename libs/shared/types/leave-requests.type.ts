@@ -23,6 +23,12 @@ export type LeaveRequestCreateDto = {
   endDate: Date;
   type: LeaveRequestType;
   reason: string;
+  autoSplitIfInsufficient?: boolean;
+}
+
+export type CalculateWorkingDaysDto = {
+  startDate: string; // ISO date string
+  endDate: string;   // ISO date string
 }
 
 export type PagedAndFilteredLeaveRequest = PagedResult<LeaveRequestResponse>;

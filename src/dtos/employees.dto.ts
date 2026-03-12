@@ -256,4 +256,13 @@ export class UpdateEmployeeDto {
   @IsOptional()
   @IsEnum(Status)
   status?: Status;
+
+  @ApiProperty({
+    example: 2,
+    description: 'Số người phụ thuộc đã đăng ký giảm trừ gia cảnh',
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  dependentCount?: number;
 }

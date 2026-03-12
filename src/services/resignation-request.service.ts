@@ -10,6 +10,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 import { DataSource, LessThanOrEqual } from "typeorm";
 import { RedisService } from "./redis.service";
+import { Department } from "@/entities/department.entity";
+import { EMPLOYEE_PERMISSIONS } from "@libs/shared/constants/permissions.constant";
+import { PORTAL_PERMISSIONS } from "@libs/shared/constants/portal-permissions.constant";
 
 @Injectable()
 export class ResignationRequestService {
@@ -130,16 +133,46 @@ export class ResignationRequestService {
     }
 
     async findAllFilteredAndPaged(
+        userId: string,
         status?: string,
         employeeName?: string,
         page?: number,
         pageSize?: number,
     ): Promise<{ items: ResignationRequest[]; total: number }> {
+        let departmentId: string | undefined = undefined; // Mặc định không filter theo phòng ban
+        const user = await this.dataSource.getRepository(User).findOne({ where: { id: userId }, relations: ['employee', 'role', 'role.permissions'] });
+        if (!user) {
+            throw new Error(`User not found: ${userId}`);
+        }
+        const permissions = user.role?.permissions ?? [];
+        const isAdmin = permissions.some(p => p.permission_code === PORTAL_PERMISSIONS.ADMIN);
+        // HR được suy luận qua quyền tạo nhân viên — cho phép xem tất cả nhân viên không giới hạn phòng ban
+        const isHR = permissions.some(p => p.permission_code === EMPLOYEE_PERMISSIONS.CREATE);
+
+        if (!isAdmin && !isHR) {
+            if (user.employee) {
+                // Manager: chỉ được xem phòng ban mình quản lý
+                const managedDepartment = await this.dataSource.getRepository(Department)
+                    .findOne({ where: { managerId: user.employee.id } });
+                if (!managedDepartment) {
+                    // Nhân viên thường (không quản lý phòng ban): không trả về dữ liệu
+                    return { items: [], total: 0 };
+                }
+                departmentId = managedDepartment.id;
+            } else {
+                // User thường không có employee record: không trả về dữ liệu
+                return { items: [], total: 0 };
+            }
+        }
+        // isAdmin hoặc isHR: departmentId = undefined → xem tất cả phòng ban
+        const effectivePage = page || 1;
+        const effectivePageSize = pageSize || 10;
         const rawKey = JSON.stringify({
             status,
             employeeName,
-            page: page || 1,
-            pageSize: pageSize || 10,
+            departmentId,
+            page: effectivePage,
+            pageSize: effectivePageSize,
         });
         const cacheKey = `resignation_requests:${createHash('md5').update(rawKey).digest('hex')}`;
         const cacheResult = await this.redisService.get<{ items: ResignationRequest[]; total: number }>(cacheKey);
@@ -149,8 +182,9 @@ export class ResignationRequestService {
         const result = await this.resignationRequestRepository.findAllFilteredAndPaged(
             status,
             employeeName,
-            page,
-            pageSize,
+            departmentId,
+            effectivePage,
+            effectivePageSize,
         );
         await this.redisService.set(cacheKey, result, 300); // Cache trong 5 phút
         return result;

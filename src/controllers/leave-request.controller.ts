@@ -8,26 +8,48 @@ import {
     Param,
     Query,
     Req,
-    UseGuards,
     BadRequestException,
     UnauthorizedException
 } from "@nestjs/common";
 import { CreateLeaveRequestDto } from "@/dtos/leave-requests.dto";
+import { CalculateWorkingDaysDTO } from "@/dtos/calculate-working-days.dto";
 import { LeaveRequestsMapper } from "@/mappers/leave-requests.mapper";
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { LeaveRequestResponse, PagedAndFilteredLeaveRequest } from "@libs/shared/types/leave-requests.type";
-import { JwtAuthGuard } from "@/guards/auth.guard";
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody, ApiCookieAuth } from "@nestjs/swagger";
 import { LeaveRequestStatus } from "@libs/shared/enums/leave-request-status.enum";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('Leave Requests')
 @Controller('leave-requests')
-@UseGuards(JwtAuthGuard)
 export class LeaveRequestController {
     constructor(private readonly leaveRequestService: LeaveRequestService) { }
 
+    @Post('calculate-days')
+    @RequirePermissions(PERMISSIONS.LEAVE_REQUEST.VIEW)
+    @ApiOperation({
+        summary: 'Tính toán số ngày làm việc thực tế',
+        description: 'Tính toán số ngày làm việc giữa 2 ngày dựa trên lịch làm việc và ngày lễ trong database.'
+    })
+    @ApiBody({ type: CalculateWorkingDaysDTO })
+    async calculateWorkingDays(
+        @Body() dto: CalculateWorkingDaysDTO
+    ): Promise<ApiResponse<{ duration: number }>> {
+        try {
+            const start = new Date(dto.startDate);
+            const end = new Date(dto.endDate);
+            const duration = await this.leaveRequestService.calculateWorkingDays(start, end);
+            return ResponseHelper.send({ duration });
+        } catch (error) {
+            console.error('Error in calculateWorkingDays:', error);
+            throw error;
+        }
+    }
+
     @Post()
+    @RequirePermissions(PERMISSIONS.LEAVE_REQUEST.CREATE)
     @ApiOperation({
         summary: 'Tạo đơn nghỉ phép mới',
         description: 'Tạo đơn xin nghỉ phép cho nhân viên. Hệ thống sẽ kiểm tra trùng lịch nghỉ và validate thời gian.'
@@ -56,6 +78,7 @@ export class LeaveRequestController {
     }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.LEAVE_REQUEST.VIEW)
     @ApiOperation({
         summary: 'Lấy danh sách đơn nghỉ phép với bộ lọc',
         description: 'Lấy danh sách đơn nghỉ phép với khả năng tìm kiếm, lọc theo trạng thái, thời gian và phân trang'
@@ -77,25 +100,29 @@ export class LeaveRequestController {
             page?: number,
             pageSize?: number,
         },
+        @Req() req: any,
     ): Promise<ApiResponse<PagedAndFilteredLeaveRequest>> {
         try {
-
+            const page = Number(params.page) || 1;
+            const pageSize = Number(params.pageSize) || 10;
+            const userId = req.user.id;
             const leaveRequests = await this.leaveRequestService.findAllWithFilteredAndPaged(
+                userId,
                 params.status,
                 params.startDateFrom,
                 params.startDateTo,
-                params.page,
-                params.pageSize,
+                page,
+                pageSize,
             );
 
             const result: PagedAndFilteredLeaveRequest = {
                 items: LeaveRequestsMapper.toResponseList(leaveRequests.items),
                 totalCount: leaveRequests.total,
-                page: params.page || 1,
-                pageSize: params.pageSize || 10,
-                totalPages: Math.ceil(leaveRequests.total / (params.pageSize || 10)),
-                hasNextPage: (params.page || 1) * (params.pageSize || 10) < leaveRequests.total,
-                hasPreviousPage: (params.page || 1) > 1,
+                page,
+                pageSize,
+                totalPages: Math.ceil(leaveRequests.total / pageSize),
+                hasNextPage: page * pageSize < leaveRequests.total,
+                hasPreviousPage: page > 1,
             };
 
             return ResponseHelper.send(result);
@@ -106,6 +133,7 @@ export class LeaveRequestController {
     }
 
     @Get('my')
+    @RequirePermissions(PERMISSIONS.LEAVE_REQUEST.VIEW)
     @ApiOperation({
         summary: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với bộ lọc',
         description: 'Lấy danh sách đơn nghỉ phép của người dùng hiện tại với khả năng tìm kiếm, lọc theo trạng thái, thời gian và phân trang'
@@ -161,6 +189,7 @@ export class LeaveRequestController {
     }
 
     @Patch(':id/status')
+    @RequirePermissions(PERMISSIONS.LEAVE_REQUEST.APPROVE)
     @ApiOperation({
         summary: 'Cập nhật trạng thái đơn nghỉ phép',
         description: 'Phê duyệt hoặc từ chối đơn nghỉ phép. Chỉ có thể cập nhật đơn đang ở trạng thái PENDING.'

@@ -103,6 +103,10 @@ export class Employee {
     return this.totalAnnualLeave - this.usedAnnualLeave;
   }
 
+  // Số người phụ thuộc đã đăng ký giảm trừ gia cảnh
+  @Column('int', { default: 0 })
+  dependentCount: number;
+
   @OneToOne(() => User, (user) => user.employee, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'user_id' })
   user: User;

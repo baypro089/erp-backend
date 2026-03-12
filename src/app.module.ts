@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import databaseConfig from '@/configurations/database.config';
@@ -35,6 +36,9 @@ import { HrStatisticModule } from './modules/hr-statistic.module';
 import { HrReportModule } from './modules/hr-report.module';
 import { SalesStatisticModule } from './modules/sales-statistic.module';
 import { WarehouseReportModule } from './modules/warehouse-report.module';
+import { CacheModule } from './modules/cache.module';
+import { JwtAuthGuard } from './guards/auth.guard';
+import { PermissionsGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
@@ -71,6 +75,7 @@ import { WarehouseReportModule } from './modules/warehouse-report.module';
     HrReportModule,
     SalesStatisticModule,
     WarehouseReportModule,
+    CacheModule,
 
     ConfigModule.forRoot({
       isGlobal: true, 
@@ -89,6 +94,19 @@ import { WarehouseReportModule } from './modules/warehouse-report.module';
 
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    // ─── Global Guards ───────────────────────────────────────────────────────
+    // JwtAuthGuard chạy trước, xác thực JWT token cho tất cả các route (trừ @Public())
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    // PermissionsGuard chạy sau JwtAuthGuard và kiểm tra quyền hạn của người dùng
+    // dựa trên decorator @RequirePermissions() khai báo trên route/controller.
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+  ],
 })
 export class AppModule {}

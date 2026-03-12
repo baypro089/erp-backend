@@ -12,12 +12,14 @@ export class ResignationRequestRepository extends Repository<ResignationRequest>
     async findAllFilteredAndPaged(
         status?: string,
         employeeName?: string,
+        departmentId?: string,
         page?: number,
         pageSize?: number,
     ): Promise<{items: ResignationRequest[], total: number}> {
         const query = this.createQueryBuilder('resignation_requests')
             .leftJoinAndSelect('resignation_requests.employee', 'employee')
             .leftJoinAndSelect('resignation_requests.approver', 'approver')
+            .leftJoinAndSelect('approver.role', 'approver_role')
             .orderBy('resignation_requests.createdAt', 'DESC');
         
         if (status) {
@@ -25,6 +27,9 @@ export class ResignationRequestRepository extends Repository<ResignationRequest>
         }
         if (employeeName) {
             query.andWhere('unaccent(employee.fullName) ILIKE unaccent(:employeeName)', { employeeName: `%${employeeName}%` });
+        }
+        if (departmentId) {
+            query.andWhere('employee.departmentId = :departmentId', { departmentId });
         }
         if (page && pageSize) {
             const pageNum = Number(page);

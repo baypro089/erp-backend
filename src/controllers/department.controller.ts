@@ -7,6 +7,8 @@ import { Department } from "@/entities/department.entity";
 import { ResponseHelper } from '@libs/core/helpers/response.helper';
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 
 @ApiTags('Departments')
@@ -17,6 +19,7 @@ export class DepartmentController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.DEPARTMENT.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách tất cả phòng ban', description: 'Lấy danh sách tất cả phòng ban đang hoạt động' })
     @SwaggerApiResponse({ status: 200, description: 'Lấy danh sách phòng ban thành công' })
     async getAllDepartments(): Promise<ApiResponse<DepartmentResponse[]>> {
@@ -30,6 +33,7 @@ export class DepartmentController {
     }
 
     @Get('/optional')
+    @RequirePermissions(PERMISSIONS.DEPARTMENT.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách phòng ban với bộ lọc', description: 'Lấy danh sách phòng ban với khả năng tìm kiếm, lọc và phân trang' })
     @ApiQuery({ name: 'name', required: false, description: 'Tìm kiếm theo tên phòng ban' })
     @ApiQuery({ name: 'page', required: false, description: 'Số trang', type: Number })
@@ -65,6 +69,7 @@ export class DepartmentController {
     }
 
     @Get('/:id')
+    @RequirePermissions(PERMISSIONS.DEPARTMENT.VIEW)
     @ApiOperation({ summary: 'Lấy thông tin phòng ban theo ID', description: 'Lấy chi tiết thông tin một phòng ban' })
     @ApiParam({ name: 'id', description: 'ID của phòng ban', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Lấy thông tin phòng ban thành công' })
@@ -82,6 +87,7 @@ export class DepartmentController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.DEPARTMENT.CREATE)
     @ApiOperation({ summary: 'Tạo phòng ban mới', description: 'Tạo một phòng ban mới' })
     @ApiBody({ type: CreateDepartmentDto, description: 'Thông tin phòng ban cần tạo' })
     @SwaggerApiResponse({ status: 201, description: 'Tạo phòng ban thành công' })
@@ -105,6 +111,7 @@ export class DepartmentController {
 
 
     @Put('/:id')
+    @RequirePermissions(PERMISSIONS.DEPARTMENT.UPDATE)
     @ApiOperation({ summary: 'Cập nhật phòng ban', description: 'Cập nhật thông tin phòng ban' })
     @ApiParam({ name: 'id', description: 'ID của phòng ban', type: String })
     @ApiBody({ type: UpdateDepartmentDto, description: 'Thông tin phòng ban cần cập nhật' })
@@ -124,6 +131,7 @@ export class DepartmentController {
     }
 
     @Delete('/delete')
+    @RequirePermissions(PERMISSIONS.DEPARTMENT.DELETE)
     @ApiOperation({ summary: 'Xóa phòng ban', description: 'Xóa một hoặc nhiều phòng ban' })
     @ApiBody({ schema: { type: 'array', items: { type: 'string' } }, description: 'Danh sách ID phòng ban cần xóa' })
     @SwaggerApiResponse({ status: 200, description: 'Xóa phòng ban thành công' })

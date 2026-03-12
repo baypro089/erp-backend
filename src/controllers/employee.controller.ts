@@ -3,7 +3,7 @@ import { EmployeesMapper } from "@/mappers/employees.mapper";
 import { AttachmentMapper } from "@/mappers/attachment.mapper";
 import { EmployeeResponse, PagedAndFilteredEmployee } from "@libs/shared/types/employees.type";
 import { AttachmentResponse } from "@libs/shared/types/attachment.type";
-import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Query, UploadedFile, UploadedFiles, UseInterceptors, Param } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Post, Put, Query, UploadedFile, UploadedFiles, UseInterceptors, Param, Req } from "@nestjs/common";
 import { Employee } from "@/entities/employee.entity";
 import { ResponseHelper } from '@libs/core/helpers/response.helper';
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
@@ -11,6 +11,8 @@ import { FileInterceptor, FileFieldsInterceptor } from "@nestjs/platform-express
 import { FileService } from "@/services/file.service";
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { CreateEmployeeDto, UpdateEmployeeDto } from "@/dtos/employees.dto";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 
 @ApiTags('Employees')
@@ -21,6 +23,7 @@ export class EmployeeController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách tất cả nhân viên', description: 'Lấy danh sách tất cả nhân viên đang hoạt động' })
     @SwaggerApiResponse({ status: 200, description: 'Lấy danh sách nhân viên thành công' })
     async getAllEmployees(@Query('permissionPortal') permissionPortal?: string): Promise<ApiResponse<EmployeeResponse[]>> {
@@ -34,6 +37,7 @@ export class EmployeeController {
     }
 
     @Get('/optional')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách nhân viên với bộ lọc', description: 'Lấy danh sách nhân viên với khả năng tìm kiếm, lọc và phân trang' })
     @ApiQuery({ name: 'fullName', required: false, description: 'Tìm kiếm theo tên nhân viên' })
     @ApiQuery({ name: 'departmentId', required: false, description: 'Lọc theo ID phòng ban' })
@@ -44,6 +48,7 @@ export class EmployeeController {
     @ApiQuery({ name: 'pageSize', required: false, description: 'Số bản ghi mỗi trang', type: Number })
     @SwaggerApiResponse({ status: 200, description: 'Lấy danh sách nhân viên thành công' })
     async getEmployeesWithOptional(
+        @Req() req: any,
         @Query() params: {
             employeeCode?: string,
             fullName?: string,
@@ -58,7 +63,11 @@ export class EmployeeController {
         }
     ): Promise<ApiResponse<PagedAndFilteredEmployee>> {
         try {
+
+            const userId = req.user.id; 
+
             const employees = await this.employeeService.getAlllEmployeesOptional(
+                userId,
                 params.employeeCode,
                 params.fullName,
                 params.departmentId,
@@ -87,6 +96,7 @@ export class EmployeeController {
     }
 
     @Get('/optional/deleted')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách nhân viên đã xóa', description: 'Lấy danh sách nhân viên đã bị xóa (soft delete)' })
     @ApiQuery({ name: 'fullName', required: false, description: 'Tìm kiếm theo tên nhân viên' })
     @ApiQuery({ name: 'departmentId', required: false, description: 'Lọc theo ID phòng ban' })
@@ -140,6 +150,7 @@ export class EmployeeController {
     }
 
     @Get('/:id')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.VIEW)
     @ApiOperation({ summary: 'Lấy thông tin nhân viên theo ID', description: 'Lấy chi tiết thông tin một nhân viên' })
     @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Lấy thông tin nhân viên thành công' })
@@ -157,6 +168,7 @@ export class EmployeeController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.CREATE)
     @ApiOperation({ summary: 'Tạo nhân viên mới', description: 'Tạo một nhân viên mới trong hệ thống' })
     @ApiBody({ type: CreateEmployeeDto, description: 'Thông tin nhân viên cần tạo' })
     @SwaggerApiResponse({ status: 201, description: 'Tạo nhân viên thành công' })
@@ -182,6 +194,7 @@ export class EmployeeController {
 
 
     @Put('/:id')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.UPDATE)
     @ApiOperation({ summary: 'Cập nhật nhân viên', description: 'Cập nhật thông tin nhân viên (không bao gồm ảnh và CV)' })
     @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
     @ApiBody({ type: UpdateEmployeeDto, description: 'Thông tin nhân viên cần cập nhật' })
@@ -204,6 +217,7 @@ export class EmployeeController {
      * Upload hoặc cập nhật ảnh của nhân viên
      */
     @Put('/:id/photo')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.UPDATE)
     @ApiOperation({ summary: 'Upload/Cập nhật ảnh nhân viên', description: 'Upload hoặc thay đổi ảnh của nhân viên' })
     @ApiConsumes('multipart/form-data')
     @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
@@ -245,6 +259,7 @@ export class EmployeeController {
      * Upload hoặc cập nhật CV của nhân viên
      */
     @Put('/:id/cv')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.UPDATE)
     @ApiOperation({ summary: 'Upload/Cập nhật CV nhân viên', description: 'Upload hoặc thay đổi CV của nhân viên' })
     @ApiConsumes('multipart/form-data')
     @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
@@ -286,6 +301,7 @@ export class EmployeeController {
      * Lấy ảnh của nhân viên
      */
     @Get('/:id/photo')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.VIEW)
     @ApiOperation({ summary: 'Lấy ảnh nhân viên', description: 'Lấy thông tin ảnh của nhân viên' })
     @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Lấy ảnh nhân viên thành công' })
@@ -304,6 +320,7 @@ export class EmployeeController {
      * Lấy CV của nhân viên
      */
     @Get('/:id/cv')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.VIEW)
     @ApiOperation({ summary: 'Lấy CV nhân viên', description: 'Lấy thông tin CV của nhân viên' })
     @ApiParam({ name: 'id', description: 'ID của nhân viên', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Lấy CV nhân viên thành công' })
@@ -319,6 +336,7 @@ export class EmployeeController {
     }
 
     @Delete('/delete')
+    @RequirePermissions(PERMISSIONS.EMPLOYEE.DELETE)
     @ApiOperation({ summary: 'Xóa nhân viên', description: 'Xóa một hoặc nhiều nhân viên' })
     @ApiBody({ schema: { type: 'array', items: { type: 'string' } }, description: 'Danh sách ID nhân viên cần xóa' })
     @SwaggerApiResponse({ status: 200, description: 'Xóa nhân viên thành công' })

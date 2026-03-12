@@ -1,6 +1,5 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, Req, UnauthorizedException } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@/guards/auth.guard";
 import { ImportReceiptService } from "@/services/import-receipt.service";
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
@@ -8,16 +7,18 @@ import { CreateImportReceiptDTO } from "@/dtos/import-receipt.dto";
 import { ImportReceiptMapper } from "@/mappers/import-receipt.mapper";
 import { ReceiptStatus } from "@libs/shared/enums/receipt-status.enum";
 import { ImportReceiptResponse, ImportReceiptTableFilteredAndPaged } from "@libs/shared/types/import-receipt.type";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('import-receipts')
 @Controller('import-receipts')
-@UseGuards(JwtAuthGuard)
 export class ImportReceiptController {
     constructor(
         private readonly importReceiptService: ImportReceiptService
     ) { }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.IMPORT_RECEIPT.CREATE)
     async createImportReceipt(
         @Body() dto: CreateImportReceiptDTO,
         @Req() req: any,
@@ -39,6 +40,7 @@ export class ImportReceiptController {
     }
 
     @Get(':id')
+    @RequirePermissions(PERMISSIONS.IMPORT_RECEIPT.VIEW)
     async getImportReceiptById(
         @Param('id') id: string
     ): Promise<ApiResponse<ImportReceiptResponse>> {
@@ -55,6 +57,7 @@ export class ImportReceiptController {
     }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.IMPORT_RECEIPT.VIEW)
     async getAllImportReceipts(
         @Query() params: {
             code?: string;

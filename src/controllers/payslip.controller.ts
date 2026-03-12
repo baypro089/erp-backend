@@ -8,7 +8,7 @@ import {
     Param,
     Query,
     BadRequestException,
-    Req
+    Req,
 } from "@nestjs/common";
 import { PayslipsMapper } from "@/mappers/payslips.mapper";
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
@@ -16,6 +16,8 @@ import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody } from "@nestjs/swagger";
 import { CalculatePayslipDto, GeneratePayrollDto, MarkPayslipAsPaidDto } from "@/dtos/payslips.dto";
 import { PayslipResponse, PagedAndFilteredPayslip, PayrollGenerationResult } from "@libs/shared/types/payslips.type";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('Payslips')
 @Controller('payslips')
@@ -23,6 +25,7 @@ export class PayslipController {
     constructor(private readonly payslipService: PayslipService) { }
 
     @Post('calculate')
+    @RequirePermissions(PERMISSIONS.PAYSLIP.CALCULATE)
     @ApiOperation({
         summary: 'Tính lương cho một nhân viên',
         description: 'Tính lương cho một nhân viên cụ thể theo tháng và năm. Hệ thống sẽ tự động tính toán dựa trên ngày công, ngày nghỉ và mức lương hiện tại.'
@@ -53,6 +56,7 @@ export class PayslipController {
     }
 
     @Post('generate-payroll')
+    @RequirePermissions(PERMISSIONS.PAYSLIP.GENERATE)
     @ApiOperation({
         summary: 'Tính lương cho toàn bộ nhân viên',
         description: 'Chạy batch job tính lương cho tất cả nhân viên trong tháng. Trả về kết quả chi tiết cho từng nhân viên.'
@@ -78,6 +82,7 @@ export class PayslipController {
     }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.PAYSLIP.VIEW)
     @ApiOperation({
         summary: 'Lấy danh sách phiếu lương với bộ lọc',
         description: 'Lấy danh sách phiếu lương với khả năng lọc theo tháng, năm và phân trang'
@@ -96,24 +101,29 @@ export class PayslipController {
             year?: number,
             page?: number,
             pageSize?: number,
-        }
+        },
+        @Req() req: any,
     ): Promise<ApiResponse<PagedAndFilteredPayslip>> {
         try {
+            const page = Number(params.page) || 1;
+            const pageSize = Number(params.pageSize) || 10;
+            const userId = req.user.id;
             const payslips = await this.payslipService.findAllPayslips(
-                params.month,
-                params.year,
-                params.page,
-                params.pageSize
+                userId,
+                params.month ? Number(params.month) : undefined,
+                params.year ? Number(params.year) : undefined,
+                page,
+                pageSize
             );
 
             const result: PagedAndFilteredPayslip = {
                 items: PayslipsMapper.toTableResponseList(payslips.items),
                 totalCount: payslips.total,
-                page: params.page || 1,
-                pageSize: params.pageSize || 10,
-                totalPages: Math.ceil(payslips.total / (params.pageSize || 10)),
-                hasNextPage: (params.page || 1) * (params.pageSize || 10) < payslips.total,
-                hasPreviousPage: (params.page || 1) > 1,
+                page,
+                pageSize,
+                totalPages: Math.ceil(payslips.total / pageSize),
+                hasNextPage: page * pageSize < payslips.total,
+                hasPreviousPage: page > 1,
             };
             return ResponseHelper.send(result);
         } catch (error) {
@@ -123,6 +133,7 @@ export class PayslipController {
     }
 
     @Get('/my-payslips')
+    @RequirePermissions(PERMISSIONS.PAYSLIP.VIEW)
     @ApiOperation({
         summary: 'Lấy danh sách phiếu lương của chính mình',
         description: 'Nhân viên có thể xem danh sách phiếu lương của mình theo tháng và năm'
@@ -135,7 +146,7 @@ export class PayslipController {
         description: 'Lấy danh sách phiếu lương của chính mình thành công'
     })
     async getMyPayslips(
-        @Req() req,
+        @Req() req: any,
         @Query() params: {
             month?: number,
             year?: number,
@@ -143,7 +154,7 @@ export class PayslipController {
             pageSize?: number,
         }
     ): Promise<ApiResponse<PagedAndFilteredPayslip>> {
-        const userId = req.user?.id;
+        const userId = req.user.id;
         if (!userId) {
             throw new BadRequestException('User ID not found in request');
         }
@@ -174,6 +185,7 @@ export class PayslipController {
     }
 
     @Get('/my-payslips/yearly')
+    @RequirePermissions(PERMISSIONS.PAYSLIP.VIEW)
     @ApiOperation({
         summary: 'Lấy phiếu lương theo năm của chính mình',
         description: 'Nhân viên có thể xem danh sách phiếu lương của mình theo năm, kèm tổng lương và tổng lương cơ bản trong năm đó'
@@ -184,10 +196,10 @@ export class PayslipController {
         description: 'Lấy phiếu lương theo năm của chính mình thành công'
     })
     async getYearlyPayslipsForEmployee(
-        @Req() req,
+        @Req() req: any,
         @Query('year') year: number
     ): Promise<ApiResponse<{ details: PayslipResponse[], totalSalary: number, totalBaseSalary: number }>> {
-        const userId = req.user?.id;
+        const userId = req.user.id;
         if (!userId) {
             throw new BadRequestException('User ID not found in request');
         }
@@ -205,6 +217,7 @@ export class PayslipController {
     }
 
     @Patch(':id/mark-paid')
+    @RequirePermissions(PERMISSIONS.PAYSLIP.MARK_PAID)
     @ApiOperation({
         summary: 'Đánh dấu phiếu lương đã thanh toán',
         description: 'Cập nhật trạng thái phiếu lương thành đã thanh toán. Sau khi thanh toán, phiếu lương không thể chỉnh sửa.'
@@ -231,6 +244,7 @@ export class PayslipController {
     }
 
     @Get(':id')
+    @RequirePermissions(PERMISSIONS.PAYSLIP.VIEW)
     @ApiOperation({
         summary: 'Lấy chi tiết phiếu lương theo ID',
         description: 'Lấy thông tin chi tiết của một phiếu lương dựa trên ID của nó.'

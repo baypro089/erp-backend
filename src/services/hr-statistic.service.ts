@@ -51,7 +51,7 @@ export class HrStatisticService {
     // 3. PAYROLL (Quỹ lương)
     const payrollQuery = await this.dataSource.getRepository(Payslip)
       .createQueryBuilder('p')
-      .select('SUM(p.netSalary)', 'total')
+      .select('SUM(p.finalSalary)', 'total')
       .addSelect('p.isPaid', 'isPaid')
       .where('p.month = :month', { month: targetMonth.getMonth() + 1 })
       .andWhere('p.year = :year', { year: targetMonth.getFullYear() })

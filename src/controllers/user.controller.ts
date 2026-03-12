@@ -7,6 +7,8 @@ import type { UserResponse, UserFilterAndPaged } from '@libs/shared/types/users.
 import { ResponseHelper } from '@libs/core/helpers/response.helper';
 import { User } from '@/entities/user.entity';
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('Users')
 @Controller('users')
@@ -14,6 +16,7 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.USER.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách tất cả người dùng', description: 'Lấy danh sách tất cả người dùng đang hoạt động' })
     @SwaggerApiResponse({ status: 200, description: 'Lấy danh sách người dùng thành công' })
     async getAllUsers(): Promise<ApiResponse<UserResponse[]>> {
@@ -27,6 +30,7 @@ export class UsersController {
     }
 
     @Get('/optional')
+    @RequirePermissions(PERMISSIONS.USER.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách người dùng với bộ lọc', description: 'Lấy danh sách người dùng với khả năng tìm kiếm, lọc và phân trang' })
     @ApiQuery({ name: 'userId', required: false, description: 'ID người dùng' })
     @ApiQuery({ name: 'username', required: false, description: 'Tên đăng nhập' })
@@ -75,6 +79,7 @@ export class UsersController {
     }
 
     @Get('/:id')
+    @RequirePermissions(PERMISSIONS.USER.VIEW)
     @ApiOperation({ summary: 'Lấy thông tin người dùng theo ID', description: 'Lấy chi tiết thông tin một người dùng' })
     @ApiParam({ name: 'id', description: 'ID của người dùng', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Lấy thông tin người dùng thành công' })
@@ -92,6 +97,7 @@ export class UsersController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.USER.CREATE)
     @ApiOperation({ summary: 'Tạo người dùng mới', description: 'Tạo một người dùng mới trong hệ thống' })
     @ApiBody({ type: CreateUserDto, description: 'Thông tin người dùng cần tạo' })
     @SwaggerApiResponse({ status: 201, description: 'Tạo người dùng thành công' })
@@ -109,6 +115,7 @@ export class UsersController {
     }
 
     @Put('/:id')
+    @RequirePermissions(PERMISSIONS.USER.UPDATE)
     @ApiOperation({ summary: 'Cập nhật người dùng', description: 'Cập nhật thông tin người dùng' })
     @ApiParam({ name: 'id', description: 'ID của người dùng', type: String })
     @ApiBody({ type: UpdateUserDto, description: 'Thông tin người dùng cần cập nhật' })
@@ -128,6 +135,7 @@ export class UsersController {
     }
 
     @Post('/:id/ban')
+    @RequirePermissions(PERMISSIONS.USER.BAN)
     @ApiOperation({ summary: 'Cấm người dùng', description: 'Cấm một người dùng khỏi hệ thống' })
     @ApiParam({ name: 'id', description: 'ID của người dùng', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Cấm người dùng thành công' })

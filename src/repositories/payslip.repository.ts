@@ -15,6 +15,7 @@ export class PayslipRepository extends Repository<Payslip> {
         page?: number,
         pageSize?: number,
         employeeId?: string,
+        departmentId?: string,
     ): Promise<{ items: Payslip[], total: number }> {
         const query = this.createQueryBuilder('payslips')
             .leftJoinAndSelect('payslips.employee', 'employee')
@@ -24,6 +25,9 @@ export class PayslipRepository extends Repository<Payslip> {
 
         if (employeeId) {
             query.andWhere('payslips.employeeId = :employeeId', { employeeId });
+        }
+        if (departmentId) {
+            query.andWhere('employee.departmentId = :departmentId', { departmentId });
         }
         if (month) {
             query.andWhere('payslips.month = :month', { month });

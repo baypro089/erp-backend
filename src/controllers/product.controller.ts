@@ -1,6 +1,8 @@
 import { ProductMapper } from "@/mappers/product.mapper";
 import { AttachmentMapper } from "@/mappers/attachment.mapper";
 import { ProductService } from "@/services/product.service";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { PagedAndFilteredProduct, ProductResponse } from "@libs/shared/types/product.type";
@@ -29,6 +31,7 @@ export class ProductController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.PRODUCT.VIEW)
     async findAllProductsFilteredAndPaged(
         @Query() params: {
             sku?: string;
@@ -69,6 +72,7 @@ export class ProductController {
     }
 
     @Get(":id")
+    @RequirePermissions(PERMISSIONS.PRODUCT.VIEW)
     async findProductById(@Param("id") id: string): Promise<ApiResponse<ProductResponse>> {
         try {
             const product = await this.productService.findById(id);
@@ -83,6 +87,7 @@ export class ProductController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.PRODUCT.CREATE)
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         schema: {
@@ -119,6 +124,7 @@ export class ProductController {
     }
 
     @Put(":id")
+    @RequirePermissions(PERMISSIONS.PRODUCT.UPDATE)
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         schema: {
@@ -156,6 +162,7 @@ export class ProductController {
     }
 
     @Delete()
+    @RequirePermissions(PERMISSIONS.PRODUCT.DELETE)
     async removeProducts(@Body("ids") ids: string[]) {
         try {
             await this.productService.deleteProduct(ids);
@@ -170,6 +177,7 @@ export class ProductController {
      * Lấy ảnh thumbnail của product
      */
     @Get(':id/thumbnail')
+    @RequirePermissions(PERMISSIONS.PRODUCT.VIEW)
     async getProductThumbnail(@Param('id') id: string): Promise<ApiResponse<AttachmentResponse | null>> {
         try {
             const thumbnail = await this.productService.getProductThumbnail(id);

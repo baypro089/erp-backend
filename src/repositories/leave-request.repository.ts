@@ -15,6 +15,7 @@ export class LeaveRequestRepository extends Repository<LeaveRequest> {
         startDateTo?: Date,
         page?: number,
         pageSize?: number,
+        departmentId?: string,
     ): Promise<{ items: LeaveRequest[], total: number }> {
         const query = this.createQueryBuilder('leave_requests')
             .leftJoinAndSelect('leave_requests.employee', 'employee')
@@ -28,6 +29,9 @@ export class LeaveRequestRepository extends Repository<LeaveRequest> {
         }
         if (startDateTo) {
             query.andWhere('leave_requests.endDate <= :startDateTo', { startDateTo });
+        }
+        if (departmentId) {
+            query.andWhere('employee.departmentId = :departmentId', { departmentId });
         }
 
         if (page && pageSize) {

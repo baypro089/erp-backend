@@ -32,6 +32,7 @@ export class EmployeesMapper {
       status: employee.status,
       totalAnnualLeave: employee.totalAnnualLeave,
       usedAnnualLeave: employee.usedAnnualLeave,
+      dependentCount: employee.dependentCount || 0,
     };
   }
 

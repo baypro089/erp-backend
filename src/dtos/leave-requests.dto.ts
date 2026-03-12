@@ -1,5 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNotEmpty,
@@ -29,4 +30,9 @@ export class CreateLeaveRequestDto {
   @IsString()
   @IsNotEmpty()
   reason: string;
+
+  // Flag cho phép tự động tách đơn nếu không đủ phép năm
+  @IsOptional()
+  @IsBoolean()
+  autoSplitIfInsufficient?: boolean;
 }

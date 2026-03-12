@@ -1,6 +1,8 @@
 import { CreateBrandDTO, UpdateBrandDTO } from "@/dtos/brand.dto";
 import { BrandMapper } from "@/mappers/brand.mapper";
 import { BrandService } from "@/services/brand.service";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { BrandResponse, PagedAndFilteredBrand } from "@libs/shared/types/brand.type";
@@ -15,6 +17,7 @@ export class BrandController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.BRAND.VIEW)
     async findAllBrandsFilteredAndPaged(
         @Query() params: { name?: string; page?: number; pageSize?: number },
     ): Promise<ApiResponse<PagedAndFilteredBrand>> {
@@ -36,6 +39,7 @@ export class BrandController {
     }
 
     @Get(":id")
+    @RequirePermissions(PERMISSIONS.BRAND.VIEW)
     async findBrandById(@Param("id") id: string): Promise<ApiResponse<BrandResponse>> {
         const brand = await this.brandService.findById(id);
         if (!brand) {
@@ -45,18 +49,21 @@ export class BrandController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.BRAND.CREATE)
     async createBrand(@Body() brandData: CreateBrandDTO): Promise<ApiResponse<BrandResponse>> {
         const created = await this.brandService.createBrand(brandData as any);
         return ResponseHelper.send(BrandMapper.toResponse(created), 'Create brand successfully.');
     }
 
     @Put(":id")
+    @RequirePermissions(PERMISSIONS.BRAND.UPDATE)
     async updateBrand(@Param("id") id: string, @Body() updateData: Partial<UpdateBrandDTO>): Promise<ApiResponse<BrandResponse>> {
         const updated = await this.brandService.updateBrand(id, updateData);
         return ResponseHelper.send(BrandMapper.toResponse(updated), 'Update brand successfully.');
     }
 
     @Delete()
+    @RequirePermissions(PERMISSIONS.BRAND.DELETE)
     async removeBrands(@Body("ids") ids: string[]) {
         await this.brandService.deleteBrand(ids);
         return ResponseHelper.send(null, 'Delete brand successfully.');

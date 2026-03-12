@@ -1,6 +1,6 @@
-import { JwtAuthGuard } from "@/guards/auth.guard";
 import { AuthService } from "@/services/auth.service";
-import { Controller, Post, Body, Res, UnauthorizedException, Req, UseGuards, Get } from "@nestjs/common";
+import { Public } from "@/decorators/public.decorator";
+import { Controller, Post, Body, Res, UnauthorizedException, Req, Get } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiCookieAuth } from '@nestjs/swagger';
 import type { Response, Request } from "express";
 import { LoginDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from '@/dtos/auth.dto';
@@ -13,6 +13,7 @@ export class AuthController {
   ) { }
 
   @Post('login')
+  @Public()
   @ApiOperation({ 
     summary: 'User login',
     description: 'Authenticate user and set access_token and refresh_token cookies'
@@ -52,6 +53,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @Public()
   @ApiOperation({ 
     summary: 'User logout',
     description: 'Clear authentication cookies and invalidate refresh token'
@@ -81,7 +83,6 @@ export class AuthController {
   }
 
   @Get("me")
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: 'Get current user',
     description: 'Get authenticated user information'
@@ -113,6 +114,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Public()
   @ApiOperation({ 
     summary: 'Refresh access token',
     description: 'Get new access token using refresh token from cookie'
@@ -154,6 +156,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Public()
   @ApiOperation({ 
     summary: 'Request password reset OTP',
     description: 'Send OTP code to user email for password reset (expires in 5 minutes)'
@@ -182,6 +185,7 @@ export class AuthController {
   }
 
   @Post('verify-otp')
+  @Public()
   @ApiOperation({ 
     summary: 'Verify OTP code',
     description: 'Verify the OTP code sent to email (maximum 5 attempts)'
@@ -221,6 +225,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @Public()
   @ApiOperation({ 
     summary: 'Reset password',
     description: 'Reset user password with verified OTP code'

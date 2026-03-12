@@ -14,7 +14,9 @@ import { Department } from "@/entities/department.entity";
 import { Position } from "@/entities/position.entity";
 import { JobHistory } from "@/entities/job-history.entity";
 import { Status } from "@libs/shared/enums/employee-status.enum";
-
+import { User } from "@/entities/user.entity";
+import { PORTAL_PERMISSIONS } from "@libs/shared/constants/portal-permissions.constant";
+import {EMPLOYEE_PERMISSIONS} from "@libs/shared/constants/permissions.constant";
 
 @Injectable()
 export class EmployeeService {
@@ -56,6 +58,7 @@ export class EmployeeService {
     }
 
     async getAlllEmployeesOptional(
+        userId: string,
         employeeCode?: string,
         fullName?: string,
         departmentId?: string,
@@ -67,6 +70,28 @@ export class EmployeeService {
         page?: number,
         pageSize?: number,
     ): Promise<{ items: Employee[], total: number }> {
+        // Nếu userId có giá trị, tìm phòng ban mà user đó quản lý
+        const user = await this.dataSource.getRepository(User).findOne({ where: { id: userId }, relations: ['employee', 'role', 'role.permissions'] });
+        if (!user) {
+            throw new Error(`User not found: ${userId}`);
+        }
+        const permissions = user.role?.permissions ?? [];
+        const isAdmin = permissions.some(p => p.permission_code === PORTAL_PERMISSIONS.ADMIN);
+        // HR được suy luận qua quyền tạo nhân viên — cho phép xem tất cả nhân viên không giới hạn phòng ban
+        const isHR = permissions.some(p => p.permission_code === EMPLOYEE_PERMISSIONS.CREATE);
+
+        if (!isAdmin && !isHR) {
+            if (user.employee) {
+                // Manager: chỉ được xem phòng ban mình quản lý, bỏ qua departmentId từ client
+                const employeeDepartment = await this.dataSource.getRepository(Department)
+                    .findOne({ where: { managerId: user.employee.id } });
+                departmentId = employeeDepartment?.id ?? user.employee.departmentId;
+            } else {
+                // User thường không có employee record: không trả về dữ liệu
+                return { items: [], total: 0 };
+            }
+        }
+        // isAdmin hoặc isHR: giữ nguyên departmentId từ client (có thể filter hoặc xem tất cả)
 
         const rawKey = JSON.stringify({
             employeeCode,
@@ -203,7 +228,7 @@ export class EmployeeService {
     }
 
     async updateEmployee(
-        id: string, 
+        id: string,
         employeeData: Partial<Employee>,
     ): Promise<Employee | null> {
         if (employeeData.departmentId) {

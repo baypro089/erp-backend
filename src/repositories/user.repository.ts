@@ -23,7 +23,10 @@ export class UserRepository extends Repository<User> {
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.findOne({ where: { id, isActive: true }, relations: ['role', 'employee', 'employee.department', 'employee.currentPosition'] });
+    return this.findOne({
+      where: { id, isActive: true },
+      relations: ['role', 'role.permissions', 'employee', 'employee.department', 'employee.currentPosition'],
+    });
   }
 
   async findAllActiveUsers(): Promise<User[]> {

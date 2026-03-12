@@ -1,6 +1,8 @@
 import { CreateCategoryDTO, UpdateCategoryDTO } from "@/dtos/category.dto";
 import { CategoryMapper } from "@/mappers/category.mapper";
 import { CategoryService } from "@/services/category.service";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { CategoryResponse, PagedAndFilteredCategory } from "@libs/shared/types/category.type";
@@ -15,6 +17,7 @@ export class CategoryController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.CATEGORY.VIEW)
     async findAllCategoriesFilteredAndPaged(
         @Query() params: {
             name?: string,
@@ -39,6 +42,7 @@ export class CategoryController {
         return ResponseHelper.send(result, 'Get categories successfully.');
     }
     @Get(":id")
+    @RequirePermissions(PERMISSIONS.CATEGORY.VIEW)
     async findCategoryById(
         @Param("id") id: string,
     ): Promise<ApiResponse<CategoryResponse>> {
@@ -50,6 +54,7 @@ export class CategoryController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.CATEGORY.CREATE)
     async createCategory(
         @Body() categoryData: CreateCategoryDTO,
     ): Promise<ApiResponse<CategoryResponse>> {
@@ -58,6 +63,7 @@ export class CategoryController {
     }
 
     @Put(":id")
+    @RequirePermissions(PERMISSIONS.CATEGORY.UPDATE)
     async updateCategory(
         @Param("id") id: string,
         @Body() updateData: UpdateCategoryDTO,
@@ -67,6 +73,7 @@ export class CategoryController {
     }
 
     @Delete()
+    @RequirePermissions(PERMISSIONS.CATEGORY.DELETE)
     async removeCategories(
         @Body("ids") ids: string[],
     ) {

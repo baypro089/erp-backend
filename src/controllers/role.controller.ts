@@ -10,6 +10,8 @@ import { CreateRoleDTO, UpdateRoleDTO } from '@/dtos/roles.dtos';
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PermissionResponse } from '@libs/shared/types/permissions.type';
 import { PermissionMapper } from '@/mappers/permissions.mapper';
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('Roles')
 @Controller('roles')
@@ -18,6 +20,7 @@ export class RoleController {
     constructor(private readonly roleService: RoleService) {    }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.ROLE.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách vai trò', description: 'Lấy danh sách vai trò với khả năng lọc theo mã và tên' })
     @ApiQuery({ name: 'roleCode', required: false, description: 'Mã vai trò' })
     @ApiQuery({ name: 'roleName', required: false, description: 'Tên vai trò' })
@@ -36,6 +39,7 @@ export class RoleController {
     }
 
     @Get('/:id')
+    @RequirePermissions(PERMISSIONS.ROLE.VIEW)
     @ApiOperation({ summary: 'Lấy thông tin vai trò theo mã', description: 'Lấy chi tiết thông tin một vai trò' })
     @ApiParam({ name: 'id', description: 'Mã vai trò', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Lấy thông tin vai trò thành công' })
@@ -53,6 +57,7 @@ export class RoleController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.ROLE.CREATE)
     @ApiOperation({ summary: 'Tạo vai trò mới', description: 'Tạo một vai trò mới trong hệ thống' })
     @ApiBody({ type: CreateRoleDTO, description: 'Thông tin vai trò cần tạo' })
     @SwaggerApiResponse({ status: 201, description: 'Tạo vai trò thành công' })
@@ -67,6 +72,7 @@ export class RoleController {
     }
 
     @Put('/:id')
+    @RequirePermissions(PERMISSIONS.ROLE.UPDATE)
     @ApiOperation({ summary: 'Cập nhật vai trò', description: 'Cập nhật thông tin vai trò' })
     @ApiParam({ name: 'id', description: 'Mã vai trò', type: String })
     @ApiBody({ type: UpdateRoleDTO, description: 'Thông tin vai trò cần cập nhật' })
@@ -85,6 +91,7 @@ export class RoleController {
     }
 
     @Delete('/delete')
+    @RequirePermissions(PERMISSIONS.ROLE.DELETE)
     @ApiOperation({ summary: 'Xóa vai trò', description: 'Xóa một hoặc nhiều vai trò' })
     @ApiBody({ schema: { type: 'array', items: { type: 'string' } }, description: 'Danh sách mã vai trò cần xóa' })
     @SwaggerApiResponse({ status: 200, description: 'Xóa vai trò thành công' })
@@ -99,6 +106,7 @@ export class RoleController {
     }
 
     @Get('/permissions/all')
+    @RequirePermissions(PERMISSIONS.PERMISSION.VIEW)
     @ApiOperation({ summary: 'Lấy tất cả quyền', description: 'Lấy danh sách tất cả các quyền có trong hệ thống' })
     @SwaggerApiResponse({ status: 200, description: 'Lấy danh sách quyền thành công' })
     async getAllPermissions(): Promise<ApiResponse<PermissionResponse[]>> {

@@ -7,9 +7,10 @@ export class DepartmentsMapper {
       id: department.id,
       name: department.name,
       description: department.description,
+      managerId: department.managerId,
       createdAt: department.createdAt,
       updatedAt: department.updatedAt,
-      totalEmployees: 0, // This field can be populated later as needed
+      totalEmployees: department.totalEmployees,
     };
   }
 

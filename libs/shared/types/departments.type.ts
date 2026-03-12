@@ -3,6 +3,7 @@ import { PagedResult } from './pagedResult.type';
 export type DepartmentResponse = {
   id: string;
   name: string;
+  managerId?: string;
   totalEmployees: number;
   description?: string;
   createdAt: Date;
@@ -17,6 +18,7 @@ export type CreateDepartmentDTO = {
 export type UpdateDepartmentDTO = {
   name?: string;
   description?: string;
+  managerId?: string;
 };
 
 

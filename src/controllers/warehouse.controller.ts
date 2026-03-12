@@ -1,6 +1,8 @@
 import { CreateWarehouseDTO, UpdateWarehouseDTO } from "@/dtos/warehouse.dto";
 import { WarehouseMapper } from "@/mappers/warehouse.mapper";
 import { WarehouseService } from "@/services/warehouse.service";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { WarehouseResponse } from "@libs/shared/types/warehouse.type";
@@ -14,6 +16,7 @@ export class WarehouseController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.WAREHOUSE.VIEW)
     async findAllWarehouses(): Promise<ApiResponse<WarehouseResponse[]>> {
         try {
             const warehouses = await this.warehouseService.findAllWarehouses();
@@ -26,6 +29,7 @@ export class WarehouseController {
     }
 
     @Get(':id')
+    @RequirePermissions(PERMISSIONS.WAREHOUSE.VIEW)
     async findOneWarehouse(@Param('id') id: string): Promise<ApiResponse<WarehouseResponse>> {
         try {
             const warehouse = await this.warehouseService.findOneWarehouse(id);
@@ -38,6 +42,7 @@ export class WarehouseController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.WAREHOUSE.CREATE)
     async createWarehouse(
         @Body() dto: CreateWarehouseDTO
     ): Promise<ApiResponse<WarehouseResponse>> {
@@ -51,6 +56,7 @@ export class WarehouseController {
     }
 
     @Put(':id')
+    @RequirePermissions(PERMISSIONS.WAREHOUSE.UPDATE)
     async updateWarehouse(
         @Param('id') id: string,
         @Body() dto: UpdateWarehouseDTO
@@ -65,6 +71,7 @@ export class WarehouseController {
     }
 
     @Put('remove')
+    @RequirePermissions(PERMISSIONS.WAREHOUSE.DELETE)
     async removeWarehouse(
         @Body() ids: string[]
     ): Promise<ApiResponse<WarehouseResponse[]>> {

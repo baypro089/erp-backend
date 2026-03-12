@@ -31,6 +31,7 @@ export type EmployeeResponse = {
   status: Status;
   totalAnnualLeave: number;
   usedAnnualLeave: number;
+  dependentCount: number;
 };
 
 export type CreateEmployeeDto = {
@@ -62,6 +63,7 @@ export type UpdateEmployeeDto = {
   currentPositionId?: string;
   managerId?: string;
   status?: Status;
+  dependentCount?: number;
 };
 
 

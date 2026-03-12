@@ -7,6 +7,8 @@ import { Position } from "@/entities/position.entity";
 import { ResponseHelper } from '@libs/core/helpers/response.helper';
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 
 @ApiTags('Positions')
@@ -17,6 +19,7 @@ export class PositionController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.POSITION.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách tất cả vị trí', description: 'Lấy danh sách tất cả vị trí/chức vụ đang hoạt động' })
     @SwaggerApiResponse({ status: 200, description: 'Lấy danh sách vị trí thành công' })
     async getAllPositions(): Promise<ApiResponse<PositionResponse[]>> {
@@ -30,6 +33,7 @@ export class PositionController {
     }
 
     @Get('/optional')
+    @RequirePermissions(PERMISSIONS.POSITION.VIEW)
     @ApiOperation({ summary: 'Lấy danh sách vị trí với bộ lọc', description: 'Lấy danh sách vị trí với khả năng tìm kiếm, lọc theo lương và phân trang' })
     @ApiQuery({ name: 'name', required: false, description: 'Tìm kiếm theo tên vị trí' })
     @ApiQuery({ name: 'minSalary', required: false, description: 'Mức lương tối thiểu', type: Number })
@@ -71,6 +75,7 @@ export class PositionController {
     }
 
     @Get('/:id')
+    @RequirePermissions(PERMISSIONS.POSITION.VIEW)
     @ApiOperation({ summary: 'Lấy thông tin vị trí theo ID', description: 'Lấy chi tiết thông tin một vị trí' })
     @ApiParam({ name: 'id', description: 'ID của vị trí', type: String })
     @SwaggerApiResponse({ status: 200, description: 'Lấy thông tin vị trí thành công' })
@@ -88,6 +93,7 @@ export class PositionController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.POSITION.CREATE)
     @ApiOperation({ summary: 'Tạo vị trí mới', description: 'Tạo một vị trí/chức vụ mới' })
     @ApiBody({ type: CreatePositionDto, description: 'Thông tin vị trí cần tạo' })
     @SwaggerApiResponse({ status: 201, description: 'Tạo vị trí thành công' })
@@ -111,6 +117,7 @@ export class PositionController {
 
 
     @Put('/:id')
+    @RequirePermissions(PERMISSIONS.POSITION.UPDATE)
     @ApiOperation({ summary: 'Cập nhật vị trí', description: 'Cập nhật thông tin vị trí' })
     @ApiParam({ name: 'id', description: 'ID của vị trí', type: String })
     @ApiBody({ type: UpdatePositionDto, description: 'Thông tin vị trí cần cập nhật' })
@@ -130,6 +137,7 @@ export class PositionController {
     }
 
     @Delete()
+    @RequirePermissions(PERMISSIONS.POSITION.DELETE)
     async deletePosition(
         @Body() ids: string[]
     ) {

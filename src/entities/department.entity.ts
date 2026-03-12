@@ -22,6 +22,9 @@ export class Department {
   @Column({ nullable: true })
   description: string;
 
+  @Column({ name: 'manager_id', nullable: true })
+  managerId: string;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
@@ -39,4 +42,6 @@ export class Department {
 
   @OneToMany(() => JobHistory, (jobHistory) => jobHistory.department)
   jobHistories: JobHistory[];
+
+  totalEmployees: number;
 }

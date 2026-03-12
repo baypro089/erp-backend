@@ -1,22 +1,23 @@
 import { CreateOrderDTO, FulfillOrderDTO } from "@/dtos/order.dto";
-import { JwtAuthGuard } from "@/guards/auth.guard";
 import { OrderService } from "@/services/order.service";
 import { OrderMapper } from "@/mappers/order.mapper";
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { OrderResponse, OrderListResponse } from "@libs/shared/types/order.type";
 import { OrderStatus } from "@libs/shared/enums/order-status.enum";
-import { Controller, UseGuards, Post, Body, Param, Get, Query, Req, UnauthorizedException, NotFoundException, Patch } from "@nestjs/common";
+import { Controller, Post, Body, Param, Get, Query, Req, UnauthorizedException, NotFoundException, Patch } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('orders')
 @Controller('orders')
-@UseGuards(JwtAuthGuard)
 export class OrderController {
   constructor(private readonly service: OrderService) { }
 
   // API 1: Dành cho Sale tạo đơn
   @Post()
+  @RequirePermissions(PERMISSIONS.ORDER.CREATE)
   async create(
     @Req() req: any,
     @Body() dto: CreateOrderDTO
@@ -39,6 +40,7 @@ export class OrderController {
 
   // API 2: Dành cho Kho xuất hàng
   @Post(':id/fulfill')
+  @RequirePermissions(PERMISSIONS.ORDER.FULFILL)
   async fulfill(
     @Req() req: any,
     @Param('id') orderId: string,
@@ -62,6 +64,7 @@ export class OrderController {
 
   // API 3: Cập nhật trạng thái đơn hàng (dành cho Sale và Kho) nếu hủy đơn đã xuất hàng thì phải có warehouseId để trả hàng về kho
   @Patch(':id/status')
+  @RequirePermissions(PERMISSIONS.ORDER.UPDATE)
   async updateStatus(
     @Req() req: any,
     @Param('id') orderId: string,
@@ -90,6 +93,7 @@ export class OrderController {
 
   // API 3: Xem danh sách đơn hàng với filters và pagination
   @Get()
+  @RequirePermissions(PERMISSIONS.ORDER.VIEW)
   async findAll(
     @Query() params: {
       code?: string;
@@ -137,6 +141,7 @@ export class OrderController {
 
   // API 4: Xem chi tiết 1 đơn hàng
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.ORDER.VIEW)
   async findOne(
     @Param('id') id: string
   ): Promise<ApiResponse<OrderResponse>> {

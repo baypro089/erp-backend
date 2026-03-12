@@ -50,9 +50,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // 5️⃣ Gán user thật vào request
+    const permissions = (user.role?.permissions ?? []).map((p) => p.permission_code);
+
     return {
       id: user.id,
       role: user.role.role_code,
+      permissions,
     };
   }
 

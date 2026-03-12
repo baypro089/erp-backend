@@ -15,6 +15,8 @@ import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { HolidayResponse } from "@libs/shared/types/holiday.type";
 import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody } from "@nestjs/swagger";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 
 @ApiTags('Holidays')
 @Controller('holidays')
@@ -22,6 +24,7 @@ export class HolidayController {
     constructor(private readonly holidayService: HolidayService) {}
 
     @Post('seed')
+    @RequirePermissions(PERMISSIONS.HOLIDAY.CREATE)
     @ApiOperation({ 
         summary: 'Tự động seed ngày lễ cho năm', 
         description: 'Tự động tạo danh sách ngày lễ Việt Nam cho một năm cụ thể từ thư viện date-holidays' 
@@ -46,6 +49,7 @@ export class HolidayController {
     }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.HOLIDAY.VIEW)
     @ApiOperation({ 
         summary: 'Lấy danh sách ngày lễ theo năm', 
         description: 'Lấy tất cả ngày lễ trong một năm cụ thể' 
@@ -68,6 +72,7 @@ export class HolidayController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.HOLIDAY.CREATE)
     @ApiOperation({ 
         summary: 'Tạo ngày lễ mới', 
         description: 'Thêm một ngày lễ tùy chỉnh vào hệ thống' 
@@ -94,6 +99,7 @@ export class HolidayController {
     }
 
     @Delete(':id')
+    @RequirePermissions(PERMISSIONS.HOLIDAY.DELETE)
     @ApiOperation({ 
         summary: 'Xóa ngày lễ', 
         description: 'Xóa một ngày lễ khỏi hệ thống theo ID' 

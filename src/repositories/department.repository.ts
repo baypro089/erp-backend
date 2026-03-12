@@ -14,7 +14,6 @@ export class DepartmentRepository extends Repository<Department> {
         pageSize?: number,
     ): Promise<{ items: Department[], total: number }> {
         const query = this.createQueryBuilder('department')
-            .where('department.deletedAt IS NULL');
 
         if (name) {
             query.andWhere('unaccent(department.name) ILIKE unaccent(:name)', { name: `%${name}%` });
@@ -28,13 +27,27 @@ export class DepartmentRepository extends Repository<Department> {
             query.skip((pageNum - 1) * pageSizeNum).take(pageSizeNum);
         }
 
+        query.loadRelationCountAndMap(
+            'department.totalEmployees',
+            'department.employees',
+            'emp',
+            (qb) => qb.where('emp.status = :activeStatus', { activeStatus: 'ACTIVE' }),
+        );
+
         const [items, total] = await query.getManyAndCount();
 
         return { items, total };
     }
 
     async findAllDepartments(): Promise<Department[]> {
-        return this.find({ where: { deletedAt: null as any } });
+        return this.createQueryBuilder('department')
+            .loadRelationCountAndMap(
+                'department.totalEmployees',
+                'department.employees',
+                'emp',
+                (qb) => qb.where('emp.status = :activeStatus', { activeStatus: 'ACTIVE' }),
+            )
+            .getMany();
     }
 
     async findById(id: string): Promise<Department | null> {

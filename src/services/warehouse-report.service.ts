@@ -3,6 +3,7 @@ import { Product } from "@/entities/product.entity";
 import { Warehouse } from "@/entities/warehouse.entity";
 import { StockChangeType } from "@libs/shared/enums/warehouse-type.enum";
 import { Injectable } from "@nestjs/common";
+import * as ExcelJS from 'exceljs';
 import { DataSource } from "typeorm";
 
 @Injectable()
@@ -96,5 +97,84 @@ export class WarehouseReportService {
       warehouse: warehouseName,
       data: formattedData
     };
+  }
+
+  async exportToExcel(filter: WarehouseReportFilterDTO): Promise<Buffer> {
+    const report = await this.getProductStatistics(filter);
+    const { period, warehouse, data } = report;
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'ERP System';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Báo cáo kho');
+
+    // ── Tiêu đề ──────────────────────────────────────────────
+    sheet.mergeCells('A1:G1');
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = `BÁO CÁO THỐNG KÊ KHO – ${period.toUpperCase()} – ${warehouse.toUpperCase()}`;
+    titleCell.font = { bold: true, size: 14 };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(1).height = 30;
+
+    sheet.addRow([]);
+
+    // ── Header bảng ──────────────────────────────────────────
+    const headerRow = sheet.addRow([
+      'STT', 'Mã SKU', 'Tên sản phẩm', 'Có Serial', 'Tổng nhập', 'Tổng xuất', 'Tồn kho hiện tại'
+    ]);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach(col => {
+      const cell = headerRow.getCell(col);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+    headerRow.height = 20;
+
+    // ── Dữ liệu ──────────────────────────────────────────────
+    data.forEach((item, idx) => {
+      const row = sheet.addRow([
+        idx + 1,
+        item.sku,
+        item.productName,
+        item.hasSerialNumber ? 'Có' : 'Không',
+        item.totalImported,
+        item.totalExported,
+        item.currentStock,
+      ]);
+      ['E', 'F', 'G'].forEach(col => { row.getCell(col).numFmt = '#,##0'; });
+      ['A', 'B', 'C', 'D'].forEach(col => { row.getCell(col).alignment = { horizontal: 'center' }; });
+      if (idx % 2 === 0) {
+        ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach(col => {
+          row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+        });
+      }
+    });
+
+    // ── Dòng tổng ────────────────────────────────────────────
+    const totalRow = sheet.addRow([
+      '', 'TỔNG', '',
+      '',
+      data.reduce((s, i) => s + i.totalImported, 0),
+      data.reduce((s, i) => s + i.totalExported, 0),
+      data.reduce((s, i) => s + i.currentStock, 0),
+    ]);
+    totalRow.font = { bold: true };
+    ['E', 'F', 'G'].forEach(col => { totalRow.getCell(col).numFmt = '#,##0'; });
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach(col => {
+      totalRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+    });
+
+    // ── Độ rộng cột ──────────────────────────────────────────
+    sheet.getColumn(1).width = 6;
+    sheet.getColumn(2).width = 16;
+    sheet.getColumn(3).width = 42;
+    sheet.getColumn(4).width = 12;
+    sheet.getColumn(5).width = 14;
+    sheet.getColumn(6).width = 14;
+    sheet.getColumn(7).width = 20;
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 }

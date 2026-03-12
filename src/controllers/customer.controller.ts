@@ -1,6 +1,8 @@
 import { CreateCustomerDTO, UpdateCustomerDTO } from "@/dtos/customer.dto";
 import { CustomerMapper } from "@/mappers/customer.mapper";
 import { CustomerService } from "@/services/customer.service";
+import { RequirePermissions } from '@/decorators/permissions.decorator';
+import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { CustomerTier } from "@libs/shared/enums/customer-tier.enum";
@@ -16,6 +18,7 @@ export class CustomerController {
     ) { }
 
     @Get()
+    @RequirePermissions(PERMISSIONS.CUSTOMER.VIEW)
     async findAllCustomersFilteredAndPaged(
         @Query() params: {
             fullName?: string;
@@ -52,6 +55,7 @@ export class CustomerController {
     }
 
     @Get(":id")
+    @RequirePermissions(PERMISSIONS.CUSTOMER.VIEW)
     async findCustomerById(@Param("id") id: string): Promise<ApiResponse<CustomerResponse>> {
         try {
             const customer = await this.customerService.findById(id);
@@ -67,6 +71,7 @@ export class CustomerController {
 
     // API 2: Tìm kiếm khách hàng theo số điện thoại
     @Get("phone/:phone")
+    @RequirePermissions(PERMISSIONS.CUSTOMER.VIEW)
     async findCustomerByPhone(@Param("phone") phone: string): Promise<ApiResponse<CustomerResponse>> {
         try {
             const customer = await this.customerService.findByPhone(phone);
@@ -78,6 +83,7 @@ export class CustomerController {
     }
 
     @Post()
+    @RequirePermissions(PERMISSIONS.CUSTOMER.CREATE)
     async createCustomer(@Body() customerData: CreateCustomerDTO): Promise<ApiResponse<CustomerResponse>> {
         try {
             const created = await this.customerService.createCustomer(customerData);
@@ -89,6 +95,7 @@ export class CustomerController {
     }
 
     @Put(":id")
+    @RequirePermissions(PERMISSIONS.CUSTOMER.UPDATE)
     async updateCustomer(@Param("id") id: string, @Body() updateData: UpdateCustomerDTO): Promise<ApiResponse<CustomerResponse>> {
         try {
             const updated = await this.customerService.updateCustomer(id, updateData);
@@ -100,6 +107,7 @@ export class CustomerController {
     }
 
     @Delete()
+    @RequirePermissions(PERMISSIONS.CUSTOMER.DELETE)
     async removeCustomers(@Body("ids") ids: string[]) {
         try {
             await this.customerService.deleteCustomer(ids);
