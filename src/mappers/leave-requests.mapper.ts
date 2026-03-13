@@ -11,6 +11,8 @@ export class LeaveRequestsMapper {
       endDate: leaveRequest.endDate,
       reason: leaveRequest.reason,
       rejectionReason: leaveRequest.rejectionReason,
+      documentUrl: leaveRequest.documentUrl,
+      isBhxhClaimed: leaveRequest.isBhxhClaimed,
       status: leaveRequest.status,
       duration: leaveRequest.duration,
       approverId: leaveRequest.approverId,

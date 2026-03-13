@@ -19,9 +19,10 @@ export class CreateLeaveRequestDto {
   @IsNotEmpty()
   startDate: Date;
 
+  // Optional: tự động tính 180 ngày cho MATERNITY
+  @IsOptional()
   @IsDateString()
-  @IsNotEmpty()
-  endDate: Date;
+  endDate?: Date;
 
   @IsEnum(LeaveRequestType)
   @IsNotEmpty()
@@ -30,6 +31,11 @@ export class CreateLeaveRequestDto {
   @IsString()
   @IsNotEmpty()
   reason: string;
+
+  // Có thể truyền URL có sẵn; ưu tiên upload file qua field `document` ở multipart/form-data
+  @IsOptional()
+  @IsString()
+  documentUrl?: string;
 
   // Flag cho phép tự động tách đơn nếu không đủ phép năm
   @IsOptional()

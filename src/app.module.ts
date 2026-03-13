@@ -19,6 +19,7 @@ import { ResignationRequestModule } from './modules/resignation-request.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SystemSettingModule } from './modules/system-setting.module';
 import { SeedModule } from './seeds/seed.module';
+import { TasksModule } from './modules/tasks.module';
 import { BrandModule } from './modules/brand.module';
 import { SupplierModule } from './modules/supplier.module';
 import { ProductModule } from './modules/product.module';
@@ -59,6 +60,7 @@ import { PermissionsGuard } from './guards/roles.guard';
     ResignationRequestModule,
     SystemSettingModule,
     SeedModule,
+    TasksModule,
     BrandModule,
     SupplierModule,
     CategoryModule,

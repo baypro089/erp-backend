@@ -10,6 +10,8 @@ export type LeaveRequestResponse = {
   duration: number;
   reason: string;
   rejectionReason?: string;
+  documentUrl?: string;
+  isBhxhClaimed: boolean;
   status: LeaveRequestStatus;
   type: LeaveRequestType;
   approverId: string | null;
@@ -20,9 +22,10 @@ export type LeaveRequestResponse = {
 export type LeaveRequestCreateDto = {
   employeeId: string;
   startDate: Date;
-  endDate: Date;
+  endDate?: Date;
   type: LeaveRequestType;
   reason: string;
+  documentUrl?: string;
   autoSplitIfInsufficient?: boolean;
 }
 

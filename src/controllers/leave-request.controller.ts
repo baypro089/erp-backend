@@ -9,7 +9,9 @@ import {
     Query,
     Req,
     BadRequestException,
-    UnauthorizedException
+    UnauthorizedException,
+    UploadedFile,
+    UseInterceptors,
 } from "@nestjs/common";
 import { CreateLeaveRequestDto } from "@/dtos/leave-requests.dto";
 import { CalculateWorkingDaysDTO } from "@/dtos/calculate-working-days.dto";
@@ -17,10 +19,11 @@ import { LeaveRequestsMapper } from "@/mappers/leave-requests.mapper";
 import { ResponseHelper } from "@libs/core/helpers/response.helper";
 import { ApiResponse } from "@libs/core/interfaces/apiResponse.interface";
 import { LeaveRequestResponse, PagedAndFilteredLeaveRequest } from "@libs/shared/types/leave-requests.type";
-import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody, ApiCookieAuth } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiResponse as SwaggerApiResponse, ApiQuery, ApiParam, ApiBody, ApiCookieAuth, ApiConsumes } from "@nestjs/swagger";
 import { LeaveRequestStatus } from "@libs/shared/enums/leave-request-status.enum";
 import { RequirePermissions } from '@/decorators/permissions.decorator';
 import { PERMISSIONS } from '@libs/shared/constants/permissions.constant';
+import { FileInterceptor } from "@nestjs/platform-express";
 
 @ApiTags('Leave Requests')
 @Controller('leave-requests')
@@ -54,7 +57,32 @@ export class LeaveRequestController {
         summary: 'Tạo đơn nghỉ phép mới',
         description: 'Tạo đơn xin nghỉ phép cho nhân viên. Hệ thống sẽ kiểm tra trùng lịch nghỉ và validate thời gian.'
     })
-    @ApiBody({ type: CreateLeaveRequestDto })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                employeeId: { type: 'string', format: 'uuid' },
+                startDate: { type: 'string', format: 'date-time' },
+                endDate: { type: 'string', format: 'date-time', nullable: true },
+                type: { type: 'string' },
+                reason: { type: 'string' },
+                autoSplitIfInsufficient: { type: 'boolean', nullable: true },
+                documentUrl: {
+                    type: 'string',
+                    nullable: true,
+                    description: 'Backward compatibility: có thể truyền URL có sẵn nếu không upload file',
+                },
+                document: {
+                    type: 'string',
+                    format: 'binary',
+                    nullable: true,
+                    description: 'File minh chứng cho nghỉ ốm/thai sản',
+                },
+            },
+            required: ['employeeId', 'startDate', 'type', 'reason'],
+        },
+    })
     @SwaggerApiResponse({
         status: 201,
         description: 'Tạo đơn nghỉ phép thành công'
@@ -63,13 +91,15 @@ export class LeaveRequestController {
         status: 400,
         description: 'Dữ liệu không hợp lệ hoặc trùng lịch nghỉ'
     })
+    @UseInterceptors(FileInterceptor('document'))
     async createLeaveRequest(
         @Body() dto: CreateLeaveRequestDto,
-        @Req() req: any
+        @Req() req: any,
+        @UploadedFile() document?: Express.Multer.File,
     ): Promise<ApiResponse<LeaveRequestResponse>> {
         try {
             const userId = req.user.id;
-            const leaveRequest = await this.leaveRequestService.create(userId, dto);
+            const leaveRequest = await this.leaveRequestService.create(userId, dto, document);
             return ResponseHelper.send(LeaveRequestsMapper.toResponse(leaveRequest));
         } catch (error) {
             console.error('Error in createLeaveRequest:', error);
@@ -250,6 +280,27 @@ export class LeaveRequestController {
             return ResponseHelper.send(LeaveRequestsMapper.toResponse(leaveRequest));
         } catch (error) {
             console.error('Error in updateLeaveRequestStatus:', error);
+            throw error;
+        }
+    }
+
+    @Patch(':id/bhxh-claim')
+    @RequirePermissions(PERMISSIONS.LEAVE_REQUEST.APPROVE)
+    @ApiOperation({
+        summary: 'Quyết toán BHXH cho đơn thai sản',
+        description: 'Đánh dấu đơn thai sản đã được quyết toán với Bảo hiểm xã hội.'
+    })
+    @ApiParam({ name: 'id', description: 'ID của đơn nghỉ thai sản' })
+    @SwaggerApiResponse({ status: 200, description: 'Quyết toán BHXH thành công' })
+    @SwaggerApiResponse({ status: 400, description: 'Đơn không hợp lệ hoặc đã quyết toán rồi' })
+    async claimBhxh(
+        @Param('id') id: string,
+    ): Promise<ApiResponse<LeaveRequestResponse>> {
+        try {
+            const leaveRequest = await this.leaveRequestService.claimBhxh(id);
+            return ResponseHelper.send(LeaveRequestsMapper.toResponse(leaveRequest));
+        } catch (error) {
+            console.error('Error in claimBhxh:', error);
             throw error;
         }
     }

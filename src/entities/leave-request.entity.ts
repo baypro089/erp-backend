@@ -38,6 +38,12 @@ export class LeaveRequest {
   @Column({ name: 'rejection_reason', nullable: true})
   rejectionReason: string;
 
+  @Column({ name: 'document_url', nullable: true })
+  documentUrl: string;
+
+  @Column({ name: 'is_bhxh_claimed', default: false })
+  isBhxhClaimed: boolean;
+
   @Column({
     type: 'enum',
     enum: LeaveRequestStatus,
