@@ -1,37 +1,37 @@
-# Huong Dan Cai Dat Va Su Dung ERP Backend
+# Hướng Dẫn Cài Đặt Và Sử Dụng ERP Backend
 
-Tai lieu nay huong dan cai dat nhanh du an va dac biet la cach dien file .env dung cho moi truong local.
+Tài liệu này hướng dẫn cài đặt nhanh dự án và đặc biệt là cách điền file `.env` đúng cho môi trường local.
 
-## 1) Yeu cau he thong
+## 1) Yêu cầu hệ thống
 
 - Node.js 20+
 - npm 10+
-- Docker Desktop (neu dung Postgres/Redis/pgAdmin bang container)
+- Docker Desktop (nếu dùng Postgres/Redis/pgAdmin bằng container)
 - Git
 
-## 2) Cai dat du an
+## 2) Cài đặt dự án
 
-Tai thu muc goc du an, chay:
+Tại thư mục gốc dự án, chạy:
 
 ```bash
 npm install
 ```
 
-## 3) Tao va dien file .env
+## 3) Tạo và điền file `.env`
 
-Neu chua co file .env:
+Nếu chưa có file `.env`:
 
 ```bash
 cp example.env .env
 ```
 
-Neu dang dung Windows PowerShell:
+Nếu đang dùng Windows PowerShell:
 
 ```powershell
 Copy-Item example.env .env
 ```
 
-### Mau .env khuyen nghi cho local
+### Mẫu `.env` khuyến nghị cho local
 
 ```env
 # --- APP CONFIG ---
@@ -77,102 +77,102 @@ MAIL_PASS=your_gmail_app_password
 MAIL_SENDER=no-reply@erp.com
 ```
 
-## 4) Giai thich nhanh cac bien quan trong trong .env
+## 4) Giải thích nhanh các biến quan trọng trong `.env`
 
-- PORT: Cong backend, mac dinh 3000.
-- DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME: ket noi Postgres.
-- TYPEORM_SYNC:
-  - true: tu dong dong bo schema (chi nen dung local/dev).
-  - false: an toan hon cho staging/production.
-- REDIS_HOST, REDIS_PORT: ket noi Redis cache.
-- PGADMIN_PORT, PGADMIN_EMAIL, PGADMIN_PASSWORD: cau hinh giao dien pgAdmin.
-- JWT_ACCESS_TOKEN_SECRET, JWT_REFRESH_TOKEN_SECRET: bat buoc phai dat gia tri manh, khong de rong.
-- CORS_ORIGIN: domain frontend duoc phep goi API.
-- MAIL_USER, MAIL_PASS: tai khoan gui mail. Voi Gmail, MAIL_PASS la App Password (khong phai mat khau dang nhap thuong).
+- `PORT`: Cổng backend, mặc định 3000.
+- `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`: kết nối Postgres.
+- `TYPEORM_SYNC`:
+  - `true`: tự động đồng bộ schema (chỉ nên dùng local/dev).
+  - `false`: an toàn hơn cho staging/production.
+- `REDIS_HOST`, `REDIS_PORT`: kết nối Redis cache.
+- `PGADMIN_PORT`, `PGADMIN_EMAIL`, `PGADMIN_PASSWORD`: cấu hình giao diện pgAdmin.
+- `JWT_ACCESS_TOKEN_SECRET`, `JWT_REFRESH_TOKEN_SECRET`: bắt buộc phải đặt giá trị mạnh, không để rỗng.
+- `CORS_ORIGIN`: domain frontend được phép gọi API.
+- `MAIL_USER`, `MAIL_PASS`: tài khoản gửi mail. Với Gmail, `MAIL_PASS` là App Password (không phải mật khẩu đăng nhập thường).
 
-## 5) Tao JWT secret manh (khuyen nghi)
+## 5) Tạo JWT secret mạnh (khuyến nghị)
 
-Co the dung Node.js de tao nhanh secret:
+Có thể dùng Node.js để tạo nhanh secret:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-Chay 2 lan de lay 2 gia tri khac nhau cho:
+Chạy 2 lần để lấy 2 giá trị khác nhau cho:
 
-- JWT_ACCESS_TOKEN_SECRET
-- JWT_REFRESH_TOKEN_SECRET
+- `JWT_ACCESS_TOKEN_SECRET`
+- `JWT_REFRESH_TOKEN_SECRET`
 
-## 6) Chay Postgres + Redis + pgAdmin bang Docker
+## 6) Chạy Postgres + Redis + pgAdmin bằng Docker
 
-Du an da co file docker-compose.yml. Chay:
+Dự án đã có file `docker-compose.yml`. Chạy:
 
 ```bash
 docker compose up -d
 ```
 
-Kiem tra container:
+Kiểm tra container:
 
 ```bash
 docker compose ps
 ```
 
-Truy cap pgAdmin tai:
+Truy cập pgAdmin tại:
 
 - http://localhost:5050
 
-Dang nhap bang:
+Đăng nhập bằng:
 
-- email: gia tri PGADMIN_EMAIL
-- password: gia tri PGADMIN_PASSWORD
+- email: giá trị `PGADMIN_EMAIL`
+- password: giá trị `PGADMIN_PASSWORD`
 
-## 7) Chay backend
+## 7) Chạy backend
 
 ```bash
 npm run start:dev
 ```
 
-Neu thanh cong, API se chay tai:
+Nếu thành công, API sẽ chạy tại:
 
 - http://localhost:3000
 
-Swagger (neu da bat trong main.ts):
+Swagger (nếu đã bật trong `main.ts`):
 
 - http://localhost:3000/api
 
-## 8) Kiem tra nhanh sau khi khoi dong
+## 8) Kiểm tra nhanh sau khi khởi động
 
-- Kiem tra DB ket noi thanh cong (khong co loi connect ECONNREFUSED 5432).
-- Kiem tra Redis ket noi thanh cong.
-- Goi thu 1 endpoint public hoac endpoint dang nhap.
+- Kiểm tra DB kết nối thành công (không có lỗi `connect ECONNREFUSED 5432`).
+- Kiểm tra Redis kết nối thành công.
+- Gọi thử 1 endpoint public hoặc endpoint đăng nhập.
 
-## 9) Loi thuong gap va cach xu ly
+## 9) Lỗi thường gặp và cách xử lý
 
-### Loi ket noi Postgres
+### Lỗi kết nối Postgres
 
-- Kiem tra container postgres da up chua: docker compose ps
-- Kiem tra DB_PORT trong .env co trung voi port map trong docker-compose.yml khong.
-- Kiem tra DB_USERNAME, DB_PASSWORD, DB_NAME.
+- Kiểm tra container postgres đã up chưa: `docker compose ps`
+- Kiểm tra `DB_PORT` trong `.env` có trùng với port map trong `docker-compose.yml` không.
+- Kiểm tra `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`.
 
-### Loi ket noi Redis
+### Lỗi kết nối Redis
 
-- Kiem tra redis container dang chay.
-- Kiem tra REDIS_HOST, REDIS_PORT.
+- Kiểm tra redis container đang chạy.
+- Kiểm tra `REDIS_HOST`, `REDIS_PORT`.
 
-### Loi CORS tren frontend
+### Lỗi CORS trên frontend
 
-- Dat CORS_ORIGIN dung voi domain frontend.
-- Neu co nhieu origin, tach bang dau phay va xu ly parser theo code backend.
+- Đặt `CORS_ORIGIN` đúng với domain frontend.
+- Nếu có nhiều origin, tách bằng dấu phẩy và xử lý parser theo code backend.
 
-### Khong gui duoc email
+### Không gửi được email
 
-- Kiem tra MAIL_USER va MAIL_PASS.
-- Neu dung Gmail, bat 2FA va tao App Password.
-- Kiem tra MAIL_PORT=587 va MAIL_SECURE=false.
+- Kiểm tra `MAIL_USER` và `MAIL_PASS`.
+- Nếu dùng Gmail, bật 2FA và tạo App Password.
+- Kiểm tra `MAIL_PORT=587` và `MAIL_SECURE=false`.
 
-## 10) Ghi chu cho production
+## 10) Ghi chú cho production
 
-- Dat TYPEORM_SYNC=false.
-- Dung secret JWT manh, khong commit .env.
-- Cau hinh CORS_ORIGIN dung domain that.
-- Dung tai khoan DB/Redis rieng, mat khau manh.
+- Đặt `TYPEORM_SYNC=false`.
+- Dùng secret JWT mạnh, không commit `.env`.
+- Cấu hình `CORS_ORIGIN` đúng domain thật.
+- Dùng tài khoản DB/Redis riêng, mật khẩu mạnh.
