@@ -8,7 +8,7 @@ export class SalaryComponentSeeder {
   constructor(
     @InjectRepository(SalaryComponent)
     private readonly salaryComponentRepository: Repository<SalaryComponent>,
-  ) {}
+  ) { }
 
   async seed() {
     const components = [
@@ -31,8 +31,20 @@ export class SalaryComponentSeeder {
         isSystem: true,
       },
       {
-        code: 'TAX',
-        name: 'Thuế TNCN',
+        code: 'BHYT',
+        name: 'Bảo hiểm y tế',
+        type: 'DEDUCTION',
+        isSystem: true,
+      },
+      {
+        code: 'BHTN',
+        name: 'Bảo hiểm thất nghiệp',
+        type: 'DEDUCTION',
+        isSystem: true,
+      },
+      {
+        code: 'PIT',
+        name: 'Thuế thu nhập cá nhân',
         type: 'DEDUCTION',
         isSystem: true,
       },

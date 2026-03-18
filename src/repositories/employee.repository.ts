@@ -34,10 +34,10 @@ export class EmployeeRepository extends Repository<Employee> {
                 'employee.createdAt',
                 'employee.updatedAt',
                 'employee.status',
-                'department',  
-                'position', 
+                'department',
+                'position',
             ])
-            .where('employee.status NOT IN (:...inactiveStatus)', { inactiveStatus: [Status.RESIGNED] });
+            .where('employee.status NOT IN (:...inactiveStatus)', { inactiveStatus: [Status.RESIGNED, Status.TERMINATED] });
 
         if (employeeCode) {
             query.andWhere('employee.employeeCode = :employeeCode', { employeeCode });
@@ -102,10 +102,10 @@ export class EmployeeRepository extends Repository<Employee> {
                 'employee.createdAt',
                 'employee.updatedAt',
                 'employee.status',
-                'department',  
-                'position', 
+                'department',
+                'position',
             ])
-            .where('employee.status IN (:...deletedStatuses)', { deletedStatuses: [Status.RESIGNED] });
+            .where('employee.status IN (:...deletedStatuses)', { deletedStatuses: [Status.RESIGNED, Status.TERMINATED] });
 
         if (employeeCode) {
             query.andWhere('employee.employeeCode = :employeeCode', { employeeCode });

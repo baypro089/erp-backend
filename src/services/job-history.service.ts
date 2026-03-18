@@ -20,11 +20,24 @@ export class JobHistoryService {
             // Declare repositories within the transaction
             const jobHistoryRepo = manager.getRepository(JobHistory);
             const employeeRepo = manager.getRepository(Employee);
+            const positionRepo = manager.getRepository(Position);
+            const departmentRepo = manager.getRepository(Department);
 
             // Validate employee existence
             const employee = await employeeRepo.findOne({ where: { id: data.employeeId } });
             if (!employee) {
                 throw new NotFoundException('Employee does not exist');
+            }
+
+            // Validate position and department existence
+            const position = await positionRepo.findOne({ where: { id: data.positionId } });
+            if (!position) {
+                throw new NotFoundException('Position does not exist');
+            }
+
+            const department = await departmentRepo.findOne({ where: { id: data.departmentId } });
+            if (!department) {
+                throw new NotFoundException('Department does not exist');
             }
 
             // Check for existing current job history
@@ -47,16 +60,23 @@ export class JobHistoryService {
                 await jobHistoryRepo.save(currentJobHistory);
             }
 
+            // Keep employee current department and position in sync with latest job history
+            employee.currentPositionId = data.positionId!;
+            employee.departmentId = data.departmentId!;
+            await employeeRepo.save(employee);
+
             // Create new job history record
             const newJobHistory = jobHistoryRepo.create({
                 employee,
-                position: { id: data.positionId} as Position,
-                department: { id: data.departmentId } as Department,
+                position,
+                department,
                 startDate: new Date(data.startDate!),
                 salaryAtTime: data.salaryAtTime,
                 note: data.note,
                 isCurrent: true,
             });
+
+            
             await jobHistoryRepo.save(newJobHistory);
 
             return newJobHistory;

@@ -10,6 +10,7 @@ export class PayslipRepository extends Repository<Payslip> {
     }
 
     async findAllPayslipsFilteredAndPaged(
+        search?: string,
         month?: number,
         year?: number,
         page?: number,
@@ -20,8 +21,17 @@ export class PayslipRepository extends Repository<Payslip> {
         const query = this.createQueryBuilder('payslips')
             .leftJoinAndSelect('payslips.employee', 'employee')
             .where('employee.status IN (:...statuses)', {
-                statuses: [Status.ACTIVE, Status.MATERNITY_LEAVE, Status.PROBATION]
+                statuses: [
+                    Status.ACTIVE,
+                    Status.MATERNITY_LEAVE,
+                    Status.PROBATION,
+                    Status.RESIGNED,
+                    Status.TERMINATED,
+                ]
             });
+        if (search) {
+            query.andWhere('(unaccent(employee.full_name) ILIKE unaccent(:search) OR unaccent(employee.employee_code) ILIKE unaccent(:search))', { search: `%${search}%` });
+        }
 
         if (employeeId) {
             query.andWhere('payslips.employeeId = :employeeId', { employeeId });

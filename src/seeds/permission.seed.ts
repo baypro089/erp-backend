@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Permission } from '@/entities/permission.entity';
+import { PORTAL_PERMISSIONS } from '@libs/shared/constants/portal-permissions.constant';
 
 @Injectable()
 export class PermissionSeeder {
@@ -11,6 +12,10 @@ export class PermissionSeeder {
   ) {}
 
   private readonly permissions: { permission_code: string; permission_name: string; type: string }[] = [
+    // PORTAL
+    { permission_code: PORTAL_PERMISSIONS.ADMIN, permission_name: 'Truy cập trang admin', type: 'PORTAL_ACCESS' },
+    { permission_code: PORTAL_PERMISSIONS.HR, permission_name: 'Truy cập trang HR', type: 'PORTAL_ACCESS' },
+    { permission_code: PORTAL_PERMISSIONS.SALE, permission_name: 'Truy cập trang Sale', type: 'PORTAL_ACCESS' },
     // ─── USER ────────────────────────────────────────────────────────────────
     { permission_code: 'USER_CREATE',        permission_name: 'Tạo người dùng',              type: 'USER' },
     { permission_code: 'USER_VIEW',          permission_name: 'Xem người dùng',              type: 'USER' },
@@ -75,6 +80,13 @@ export class PermissionSeeder {
     { permission_code: 'RESIGNATION_REQUEST_VIEW',    permission_name: 'Xem đơn từ chức',          type: 'RESIGNATION_REQUEST' },
     { permission_code: 'RESIGNATION_REQUEST_UPDATE',  permission_name: 'Cập nhật đơn từ chức',     type: 'RESIGNATION_REQUEST' },
     { permission_code: 'RESIGNATION_REQUEST_APPROVE', permission_name: 'Duyệt đơn từ chức',        type: 'RESIGNATION_REQUEST' },
+
+    // ─── TERMINATION_REQUEST ────────────────────────────────────────────────
+    { permission_code: 'TERMINATION_REQUEST_CREATE',  permission_name: 'Tạo yêu cầu sa thải',      type: 'TERMINATION_REQUEST' },
+    { permission_code: 'TERMINATION_REQUEST_VIEW',    permission_name: 'Xem yêu cầu sa thải',      type: 'TERMINATION_REQUEST' },
+    { permission_code: 'TERMINATION_REQUEST_UPDATE',  permission_name: 'Cập nhật yêu cầu sa thải', type: 'TERMINATION_REQUEST' },
+    { permission_code: 'TERMINATION_REQUEST_APPROVE', permission_name: 'Duyệt yêu cầu sa thải',    type: 'TERMINATION_REQUEST' },
+    { permission_code: 'TERMINATION_REQUEST_RESTORE', permission_name: 'Khôi phục sa thải nhầm',   type: 'TERMINATION_REQUEST' },
 
     // ─── SYSTEM_SETTING ──────────────────────────────────────────────────────
     { permission_code: 'SYSTEM_SETTING_VIEW',   permission_name: 'Xem cài đặt hệ thống',          type: 'SYSTEM_SETTING' },

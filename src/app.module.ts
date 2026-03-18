@@ -16,6 +16,7 @@ import { LeaveRequestModule } from './modules/leave-request.module';
 import { PayslipModule } from './modules/payslip.module';
 import { HolidayModule } from './modules/holiday.module';
 import { ResignationRequestModule } from './modules/resignation-request.module';
+import { TerminationRequestModule } from './modules/termination-request.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SystemSettingModule } from './modules/system-setting.module';
 import { SeedModule } from './seeds/seed.module';
@@ -58,6 +59,7 @@ import { PermissionsGuard } from './guards/roles.guard';
     PayslipModule,
     HolidayModule,
     ResignationRequestModule,
+    TerminationRequestModule,
     SystemSettingModule,
     SeedModule,
     TasksModule,

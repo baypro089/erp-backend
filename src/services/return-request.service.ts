@@ -8,6 +8,7 @@ import { ReturnRequest } from "@/entities/return-request.entity";
 import { StockHistory } from "@/entities/stock-history.entity";
 import { Warehouse } from "@/entities/warehouse.entity";
 import { ReturnRequestRepository } from "@/repositories/return-request.repository";
+import { OrderStatus } from "@libs/shared/enums/order-status.enum";
 import { ReturnStatus } from "@libs/shared/enums/return-status.enum";
 import { SerialStatus } from "@libs/shared/enums/serial-status.enum";
 import { StockChangeType } from "@libs/shared/enums/warehouse-type.enum";
@@ -35,6 +36,9 @@ export class ReturnService {
                 relations: ['customer', 'items', 'items.product', 'creator', 'creator.role']
             });
             if (!order) throw new NotFoundException('Không tìm thấy đơn hàng gốc');
+            if (order.status !== OrderStatus.DELIVERED) {
+                throw new BadRequestException('Chỉ có thể tạo phiếu trả hàng cho đơn hàng đã hoàn thành (DELIVERED)');
+            }
 
             // 2. Kiểm tra kho nhận hàng tồn tại
             const warehouse = await manager.findOne(Warehouse, {

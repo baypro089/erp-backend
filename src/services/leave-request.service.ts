@@ -15,6 +15,7 @@ import { PORTAL_PERMISSIONS } from "@libs/shared/constants/portal-permissions.co
 import { EMPLOYEE_PERMISSIONS } from "@libs/shared/constants/permissions.constant";
 import { Status } from "@libs/shared/enums/employee-status.enum";
 import { FileService } from "./file.service";
+import dayjs from 'dayjs';
 
 const MATERNITY_DAYS = 180;
 
@@ -79,7 +80,7 @@ export class LeaveRequestService {
 
             const holidayRepo = manager.getRepository(Holiday);
             const dbHolidays = await holidayRepo.find();
-            const holidaySet = new Set(dbHolidays.map(h => h.date.toISOString().split('T')[0]));
+            const holidaySet = new Set(dbHolidays.map(h => dayjs(h.date).format('YYYY-MM-DD')));
             const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
             const isWorkingDay = (d: Date) => !isWeekend(d) && !holidaySet.has(d.toISOString().split('T')[0]);
             const addWorkingDays = (startDate: Date, daysToAdd: number): Date => {
@@ -428,7 +429,7 @@ export class LeaveRequestService {
     // Quyết toán BHXH cho đơn thai sản
     async claimBhxh(leaveRequestId: string): Promise<LeaveRequest> {
         const leaveRepo = this.dataSource.getRepository(LeaveRequest);
-        const leaveRequest = await leaveRepo.findOne({ where: { id: leaveRequestId } });
+        const leaveRequest = await leaveRepo.findOne({ where: { id: leaveRequestId }, relations: ['employee'] });
 
         if (!leaveRequest) {
             throw new BadRequestException('Leave request does not exist');

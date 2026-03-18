@@ -4,13 +4,15 @@ import { EmployeeRepository } from "@/repositories/employee.repository";
 import { PayslipRepository } from "@/repositories/payslip.repository";
 import { LeaveRequestStatus, LeaveRequestType } from "@libs/shared/enums/leave-request-status.enum";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { DataSource, In, LessThanOrEqual } from "typeorm";
+import { DataSource, EntityManager, In } from "typeorm";
 import { RedisService } from "./redis.service";
 import { PayrollGenerationResult, PayrollItemResult } from "@libs/shared/types/payslips.type";
 import { Status } from "@libs/shared/enums/employee-status.enum";
 import { Employee } from "@/entities/employee.entity";
 import { ResignationRequest } from "@/entities/resignation-request.entity";
 import { ResignationStatus } from "@libs/shared/enums/resignation-status.enum";
+import { TerminationRequest } from "@/entities/termination-request.entity";
+import { TerminationStatus } from "@libs/shared/enums/termination-status.enum";
 import { SystemSetting } from "@/entities/system-setting";
 import { JobHistory } from "@/entities/job-history.entity";
 import { Holiday } from "@/entities/holiday.entity";
@@ -50,11 +52,11 @@ export class PayslipService {
     ) { }
 
     // Hàm tính lương cho 1 nhân viên
-    async calculatePayslip(employeeId: string, month: number, year: number): Promise<Payslip> {
-        return this.dataSource.transaction(async (manager) => {
+    async calculatePayslip(employeeId: string, month: number, year: number, manager?: EntityManager): Promise<Payslip> {
+        const calculate = async (txManager: EntityManager): Promise<Payslip> => {
 
             // Lấy danh sách ngày lễ từ database
-            const holidayRepo = manager.getRepository(Holiday);
+            const holidayRepo = txManager.getRepository(Holiday);
             const dbHolidays = await holidayRepo.find();
             const holidayStrings = dbHolidays
                 .map(h => {
@@ -62,7 +64,7 @@ export class PayslipService {
                     return date.toISOString().split('T')[0]; // 'YYYY-MM-DD'
                 });
             const STANDARD_WORK_DAYS = getStandardWorkDays(month, year, holidayStrings, true);
-            const payslipRepo = manager.getRepository(Payslip);
+            const payslipRepo = txManager.getRepository(Payslip);
 
             // 1. Kiểm tra xem đã chốt lương tháng này chưa
             const existing = await payslipRepo.findOne({
@@ -74,14 +76,12 @@ export class PayslipService {
             }
 
             // 2. Lấy thông tin nhân viên
-            const employeeRepo = manager.getRepository(Employee);
-            const employee = await employeeRepo.findOne({
-                where: { id: employeeId, status: In([Status.ACTIVE, Status.MATERNITY_LEAVE, Status.PROBATION]) }
-            });
+            const employeeRepo = txManager.getRepository(Employee);
+            const employee = await employeeRepo.findOne({ where: { id: employeeId } });
             if (!employee) throw new NotFoundException('Nhân viên không tồn tại');
 
             // 3. Lấy mức lương hiện tại (Từ JobHistory mới nhất đang active)
-            const jobHistoryRepo = manager.getRepository(JobHistory);
+            const jobHistoryRepo = txManager.getRepository(JobHistory);
             const currentJob = await jobHistoryRepo.findOne({
                 where: { employee: { id: employeeId }, isCurrent: true }
             });
@@ -120,8 +120,10 @@ export class PayslipService {
                 return payslipRepo.save(payslip);
             }
 
-            // 4. Kiểm tra ResignationRequest APPROVED
-            const resignationRepo = manager.getRepository(ResignationRequest);
+            // 4. Kiểm tra request nghỉ việc/sa thải đã duyệt
+            const resignationRepo = txManager.getRepository(ResignationRequest);
+            const terminationRepo = txManager.getRepository(TerminationRequest);
+
             const approvedResignation = await resignationRepo.findOne({
                 where: {
                     employee: { id: employeeId },
@@ -129,11 +131,20 @@ export class PayslipService {
                 }
             });
 
-            // Tính ngày cuối cùng làm việc trong tháng (nếu có đơn nghỉ việc)
+            const approvedTermination = await terminationRepo.findOne({
+                where: {
+                    employee: { id: employeeId },
+                    status: TerminationStatus.APPROVED,
+                },
+                order: { terminationDate: 'DESC' },
+            });
+
+            // Tính ngày cuối cùng làm việc trong tháng (nếu có request nghỉ việc/sa thải)
             const startOfMonth = new Date(year, month - 1, 1);
             const endOfMonth = new Date(year, month, 0);
             let effectiveLastDay = endOfMonth; // Mặc định là ngày cuối tháng
-            let isResigningThisMonth = false;
+            let isSeparatedThisMonth = false;
+            let separationReason: 'RESIGNATION' | 'TERMINATION' | null = null;
 
             if (approvedResignation && approvedResignation.approvedLastDay) {
                 const lastDay = new Date(approvedResignation.approvedLastDay);
@@ -141,20 +152,39 @@ export class PayslipService {
                 // Kiểm tra nếu ngày nghỉ việc nằm trong tháng hiện tại
                 if (lastDay >= startOfMonth && lastDay <= endOfMonth) {
                     effectiveLastDay = lastDay;
-                    isResigningThisMonth = true;
+                    isSeparatedThisMonth = true;
+                    separationReason = 'RESIGNATION';
                 }
+            }
+
+            if (approvedTermination && approvedTermination.terminationDate) {
+                const terminateDay = new Date(approvedTermination.terminationDate);
+
+                if (terminateDay >= startOfMonth && terminateDay <= endOfMonth) {
+                    // Nếu trong tháng vừa có resignation vừa có termination thì ưu tiên ngày sớm hơn
+                    if (!isSeparatedThisMonth || terminateDay < effectiveLastDay) {
+                        effectiveLastDay = terminateDay;
+                        isSeparatedThisMonth = true;
+                        separationReason = 'TERMINATION';
+                    }
+                }
+            }
+
+            // Nhân viên đã nghỉ việc/sa thải chỉ được tính lương ở đúng tháng chấm dứt
+            if ([Status.RESIGNED, Status.TERMINATED].includes(employee.status) && !isSeparatedThisMonth) {
+                throw new BadRequestException('Nhân viên đã chấm dứt công việc, chỉ được tính lương ở tháng chấm dứt');
             }
 
             // 5. Tính số ngày nghỉ KHÔNG LƯƠNG trong tháng
             // Logic: Query các đơn APPROVED, Type != ANNUAL, nằm trong tháng
             // (Đây là logic đơn giản hóa, thực tế phải tính giao nhau giữa khoảng ngày nghỉ và tháng)
             const dbHolidayDates = dbHolidays.map(h => new Date(h.date));
-            const unpaidLeaves = await this.getUnpaidLeaveDays(employeeId, month, year, manager, dbHolidayDates);
+            const unpaidLeaves = await this.getUnpaidLeaveDays(employeeId, month, year, txManager, dbHolidayDates);
 
             // 6. Tính toán số ngày làm việc thực tế
             let actualWorkDays: number;
 
-            if (isResigningThisMonth) {
+            if (isSeparatedThisMonth) {
                 // Tính số ngày làm việc thực tế từ đầu tháng đến ngày nghỉ việc (loại trừ cuối tuần & ngày lễ)
                 actualWorkDays = calculateWorkingDays(startOfMonth, effectiveLastDay, dbHolidayDates);
                 // Trừ đi số ngày nghỉ không lương
@@ -171,7 +201,7 @@ export class PayslipService {
             let finalSalary = salaryPerDay * actualWorkDays;
 
             // Cộng thêm phụ cấp/thưởng - Trừ đi các khoản khác
-            const settings = await manager.getRepository(SystemSetting).find({ where: { isActive: true } });
+            const settings = await txManager.getRepository(SystemSetting).find({ where: { isActive: true } });
 
             const settingMap = new Map(settings.map(s => [s.key, Number(s.value)]));
 
@@ -217,7 +247,7 @@ export class PayslipService {
 
             // 7. Quyết toán phép năm (nếu nhân viên nghỉ việc trong tháng này)
             let annualLeaveSettlement = 0;
-            if (isResigningThisMonth && employee.remainingLeave > 0) {
+            if (isSeparatedThisMonth && employee.remainingLeave > 0) {
                 annualLeaveSettlement = salaryPerDay * employee.remainingLeave;
                 finalSalary += annualLeaveSettlement;
             }
@@ -238,7 +268,7 @@ export class PayslipService {
             //finalSalary = finalSalary + allowance - deduction;
 
             //F. Tính thuế TNCN
-            const { assessableIncome, pitAmount } = TaxCalculator.calculatePIT(
+            const { pitAmount } = TaxCalculator.calculatePIT(
                 finalSalary + allowance,
                 employee.dependentCount,
                 deduction, // Các khoản bảo hiểm được trừ vào thu nhập chịu thuế
@@ -251,8 +281,8 @@ export class PayslipService {
             // 8. Lưu/Cập nhật vào DB
             // Nếu chưa có thì tạo mới, có rồi (nhưng chưa pay) thì update
             let result: Payslip;
-            const note = isResigningThisMonth
-                ? `Nghỉ việc ngày ${effectiveLastDay.toLocaleDateString('vi-VN')}${annualLeaveSettlement > 0 ? ` - Quyết toán ${employee.remainingLeave} ngày phép: ${annualLeaveSettlement.toLocaleString('vi-VN')}đ` : ''}`
+            const note = isSeparatedThisMonth
+                ? `${separationReason === 'TERMINATION' ? 'Sa thải' : 'Nghỉ việc'} ngày ${effectiveLastDay.toLocaleDateString('vi-VN')}${annualLeaveSettlement > 0 ? ` - Quyết toán ${employee.remainingLeave} ngày phép: ${annualLeaveSettlement.toLocaleString('vi-VN')}đ` : ''}`
                 : undefined;
 
             if (existing) {
@@ -287,11 +317,17 @@ export class PayslipService {
             await this.redisService.delByPrefix('unpaid_leaves:');
             await this.redisService.delByPrefix('my_payslips:');
             return result;
-        });
+        };
+
+        if (manager) {
+            return calculate(manager);
+        }
+
+        return this.dataSource.transaction(async (txManager) => calculate(txManager));
     }
 
     // Helper: Tính ngày nghỉ không lương
-    private async getUnpaidLeaveDays(empId: string, month: number, year: number, manager?: any, holidays: Date[] = []): Promise<number> {
+    private async getUnpaidLeaveDays(empId: string, month: number, year: number, manager?: EntityManager, holidays: Date[] = []): Promise<number> {
         const cacheKey = `unpaid_leaves:${empId}:${year}-${month}`;
         const cached = await this.redisService.get<number>(cacheKey);
         if (cached !== null) {
@@ -381,6 +417,7 @@ export class PayslipService {
 
     async findAllPayslips(
         userId: string,
+        search?: string,
         month?: number,
         year?: number,
         page?: number,
@@ -414,13 +451,14 @@ export class PayslipService {
         // isAdmin hoặc isHR: departmentId = undefined → xem tất cả phòng ban
         const effectivePage = page || 1;
         const effectivePageSize = pageSize || 10;
-        const cacheKey = `payslips:all:${month || 'all'}:${year || 'all'}:${departmentId || 'all'}:${effectivePage}:${effectivePageSize}`;
+        const normalizedSearch = search?.trim().toLowerCase() || 'all';
+        const cacheKey = `payslips:all:${normalizedSearch}:${month || 'all'}:${year || 'all'}:${departmentId || 'all'}:${effectivePage}:${effectivePageSize}`;
 
         const cached = await this.redisService.get<{ items: Payslip[], total: number }>(cacheKey);
         if (cached) {
             return cached;
         }
-        const result = await this.payslipRepository.findAllPayslipsFilteredAndPaged(month, year, effectivePage, effectivePageSize, undefined, departmentId);
+        const result = await this.payslipRepository.findAllPayslipsFilteredAndPaged(search, month, year, effectivePage, effectivePageSize, undefined, departmentId);
         await this.redisService.set(cacheKey, result, 3600);
         return result;
     }
@@ -462,7 +500,7 @@ export class PayslipService {
         if (cached) {
             return cached;
         }
-        const result = await this.payslipRepository.findAllPayslipsFilteredAndPaged(month, year, page, pageSize, employeeId);
+        const result = await this.payslipRepository.findAllPayslipsFilteredAndPaged(undefined, month, year, page, pageSize, employeeId);
         // Lọc chỉ lấy payslip của employeeId
         result.items = result.items.filter(p => p.employee.id === employeeId);
         await this.redisService.set(cacheKey, result, 3600);

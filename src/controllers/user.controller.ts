@@ -89,7 +89,7 @@ export class UsersController {
     ): Promise<ApiResponse<UserResponse>> {
         try {
             const user = await this.usersService.findById(id);
-            return ResponseHelper.send(UsersMapper.toDTO(user as User));
+            return ResponseHelper.send(UsersMapper.toDTO(user));
         } catch (error) {
             console.error('Error in getUserById:', error);
             throw error;

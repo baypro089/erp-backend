@@ -97,6 +97,7 @@ export class PayslipController {
     })
     async getAllPayslips(
         @Query() params: {
+            search?: string,
             month?: number,
             year?: number,
             page?: number,
@@ -110,6 +111,7 @@ export class PayslipController {
             const userId = req.user.id;
             const payslips = await this.payslipService.findAllPayslips(
                 userId,
+                params.search,
                 params.month ? Number(params.month) : undefined,
                 params.year ? Number(params.year) : undefined,
                 page,

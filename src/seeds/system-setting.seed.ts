@@ -30,7 +30,18 @@ export class SystemSettingSeeder {
         description: 'Tỷ lệ khấu trừ bảo hiểm xã hội (10.5%)',
         isActive: true,
       },
-
+      {
+        key: 'HEALTH_INSURANCE_RATE_PERCENT',
+        value: '0.015',
+        description: 'Tỷ lệ khấu trừ bảo hiểm y tế (1.5%)',
+        isActive: true,
+      },
+      {
+        key: 'UNEMPLOYMENT_INSURANCE_RATE_PERCENT',
+        value: '0.01',
+        description: 'Tỷ lệ khấu trừ bảo hiểm thất nghiệp (1%)',
+        isActive: true,
+      },
     ];
 
     for (const setting of settings) {

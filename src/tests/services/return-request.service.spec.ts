@@ -5,6 +5,7 @@ import { RedisService } from '@/services/redis.service';
 import { DataSource } from 'typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ReturnStatus } from '@libs/shared/enums/return-status.enum';
+import { OrderStatus } from '@libs/shared/enums/order-status.enum';
 import { Order } from '@/entities/order.entity';
 import { Warehouse } from '@/entities/warehouse.entity';
 import { Product } from '@/entities/product.entity';
@@ -17,6 +18,7 @@ import { ReturnItem } from '@/entities/return-item.entity';
 const fakeOrder = {
     id: 'ord1', code: 'SO-001', customer: { id: 'cust1', totalSpent: 1000 },
     items: [{ id: 'oi1', product: { id: 'prod1', name: 'Laptop', hasSerialNumber: false }, quantity: 2 }],
+    status: OrderStatus.DELIVERED,
     creator: { id: 'u1', role: {} },
 };
 const fakeWarehouse = { id: 'wh1', name: 'WH1' };
@@ -94,6 +96,23 @@ describe('ReturnService', () => {
             await expect(service.processReturn('u1', {
                 orderId: 'ord1', warehouseId: 'wh1', reason: 'broken',
                 items: [{ productId: 'other-prod', quantity: 1 }],
+            } as any)).rejects.toThrow(BadRequestException);
+        });
+
+        it('should throw if order is not delivered', async () => {
+            const mgr = buildManager();
+            mgr.findOne = jest.fn().mockImplementation((entity: any) => {
+                if (entity === Order) {
+                    return Promise.resolve({ ...fakeOrder, status: OrderStatus.SHIPPED });
+                }
+                if (entity === Warehouse) return Promise.resolve(fakeWarehouse);
+                return Promise.resolve({});
+            });
+            service = await buildService({ transaction: jest.fn((cb: any) => cb(mgr)) });
+
+            await expect(service.processReturn('u1', {
+                orderId: 'ord1', warehouseId: 'wh1', reason: 'broken',
+                items: [{ productId: 'prod1', quantity: 1, refundPrice: 500 }],
             } as any)).rejects.toThrow(BadRequestException);
         });
 
