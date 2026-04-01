@@ -133,6 +133,20 @@ erDiagram
         timestamp updatedAt
     }
 
+    termination_requests {
+        uuid id PK
+        date termination_date
+        varchar termination_reason
+        uuid employee_id FK
+        enum status
+        varchar document
+        boolean is_reassign
+        uuid terminated_by FK
+        timestamp terminated_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
     payslips {
         uuid id PK
         uuid employee_id FK
@@ -379,10 +393,12 @@ erDiagram
     employees ||--o{ job_histories : "historyOf"
     employees ||--o{ leave_requests : "submits"
     employees ||--o{ resignation_requests : "submits"
+    employees ||--o{ termination_requests : "is subject of"
     employees ||--o{ payslips : "receives"
 
     users ||--o{ leave_requests : "approves (approver_id)"
     users ||--o{ resignation_requests : "approves (approver_id)"
+    users ||--o{ termination_requests : "executes (terminated_by)"
 
     job_histories }o--|| positions : "at position"
     job_histories }o--|| departments : "at department"
@@ -454,6 +470,7 @@ Lưu thông tin đăng nhập và xác thực của tất cả người dùng tr
 - Nhiều `users` thuộc một `roles` (N:1)
 - Một `users` liên kết tới một `employees` (1:1)
 - Một `users` có thể duyệt nhiều `leave_requests` và `resignation_requests`
+- Một `users` có thể thực hiện xử lý nhiều `termination_requests`
 
 ---
 
@@ -488,6 +505,9 @@ Các quyền hạn chi tiết trong hệ thống (VD: `READ_EMPLOYEE`, `APPROVE_
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Một `permissions` có thể được gán cho nhiều `roles` qua bảng `role_permissions` (N:N)
+
 ---
 
 #### Bảng `role_permissions` – Phân quyền vai trò *(bảng trung gian)*
@@ -498,6 +518,10 @@ Bảng join N:N giữa `roles` và `permissions`.
 |-----|------|-------|
 | `role_code` | VARCHAR (FK → roles) | Mã vai trò |
 | `permission_code` | VARCHAR (FK → permissions) | Mã quyền hạn |
+
+**Quan hệ:**
+- Nhiều dòng `role_permissions` thuộc một `roles` (N:1)
+- Nhiều dòng `role_permissions` thuộc một `permissions` (N:1)
 
 ---
 
@@ -536,6 +560,13 @@ Lưu đầy đủ thông tin cá nhân và công việc của từng nhân viên
 | `created_at` | TIMESTAMP | Ngày tạo hồ sơ |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Một `employees` có thể liên kết một `users` qua `user_id` (1:1, nullable)
+- Nhiều `employees` thuộc một `departments` qua `department_id` (N:1)
+- Nhiều `employees` thuộc một `positions` qua `current_position_id` (N:1)
+- Một `employees` có nhiều `job_histories`, `leave_requests`, `resignation_requests`, `termination_requests`, `payslips` (1:N)
+- Một `employees` có thể quản lý một `warehouses` qua `manager_id` (1:0..1)
+
 ---
 
 #### Bảng `departments` – Phòng ban
@@ -549,6 +580,10 @@ Lưu đầy đủ thông tin cá nhân và công việc của từng nhân viên
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 | `deleted_at` | TIMESTAMP | Ngày xóa mềm |
+
+**Quan hệ:**
+- Một `departments` có nhiều `employees` (1:N)
+- Một `departments` có nhiều `job_histories` (1:N)
 
 ---
 
@@ -564,6 +599,10 @@ Lưu đầy đủ thông tin cá nhân và công việc của từng nhân viên
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 | `deleted_at` | TIMESTAMP | Ngày xóa mềm |
+
+**Quan hệ:**
+- Một `positions` có nhiều `employees` (1:N)
+- Một `positions` có nhiều `job_histories` (1:N)
 
 ---
 
@@ -584,6 +623,11 @@ Ghi lại toàn bộ quá trình thay đổi vị trí / phòng ban / mức lư�
 | `is_current` | BOOLEAN | Đây có phải bản ghi hiện hành không |
 | `created_at` | TIMESTAMP | Ngày tạo |
 
+**Quan hệ:**
+- Nhiều `job_histories` thuộc một `employees` qua `employee_id` (N:1)
+- Nhiều `job_histories` thuộc một `positions` qua `position_id` (N:1)
+- Nhiều `job_histories` thuộc một `departments` qua `department_id` (N:1)
+
 ---
 
 #### Bảng `leave_requests` – Đơn xin nghỉ phép
@@ -603,6 +647,10 @@ Ghi lại toàn bộ quá trình thay đổi vị trí / phòng ban / mức lư�
 | `created_at` | TIMESTAMP | Ngày nộp đơn |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Nhiều `leave_requests` thuộc một `employees` qua `employee_id` (N:1)
+- Nhiều `leave_requests` có thể được duyệt bởi một `users` qua `approver_id` (N:1, nullable)
+
 ---
 
 #### Bảng `resignation_requests` – Đơn xin nghỉ việc
@@ -621,6 +669,32 @@ Ghi lại toàn bộ quá trình thay đổi vị trí / phòng ban / mức lư�
 | `hrNote` | TEXT | Ghi chú HR (Exit Interview feedback) |
 | `createdAt` | TIMESTAMP | Ngày tạo |
 | `updatedAt` | TIMESTAMP | Ngày cập nhật |
+
+**Quan hệ:**
+- Nhiều `resignation_requests` thuộc một `employees` qua `employee_id` (N:1)
+- Nhiều `resignation_requests` có thể được duyệt bởi một `users` qua `approver_id` (N:1, nullable)
+
+---
+
+#### Bảng `termination_requests` – Hồ sơ sa thải / chấm dứt hợp đồng
+
+| Cột | Kiểu | Mô tả |
+|-----|------|-------|
+| `id` | UUID (PK) | Định danh duy nhất |
+| `termination_date` | DATE | Ngày dự kiến/thực tế chấm dứt |
+| `termination_reason` | VARCHAR | Lý do chấm dứt |
+| `employee_id` | UUID (FK → employees) | Nhân viên bị chấm dứt |
+| `status` | ENUM (PENDING, APPROVED, REJECTED) | Trạng thái xử lý hồ sơ |
+| `document` | VARCHAR (nullable) | Đường dẫn tài liệu liên quan |
+| `is_reassign` | BOOLEAN | Đã hoàn tất bàn giao tài sản/công việc chưa |
+| `terminated_by` | UUID (FK → users, nullable) | Người thực hiện xử lý |
+| `terminated_at` | TIMESTAMP (nullable) | Thời điểm hoàn tất xử lý |
+| `created_at` | TIMESTAMP | Ngày tạo hồ sơ |
+| `updated_at` | TIMESTAMP | Ngày cập nhật |
+
+**Quan hệ:**
+- Nhiều `termination_requests` thuộc một `employees` qua `employee_id` (N:1)
+- Nhiều `termination_requests` có thể do một `users` xử lý qua `terminated_by` (N:1, nullable)
 
 ---
 
@@ -644,6 +718,9 @@ Lưu kết quả tính lương hàng tháng của từng nhân viên. Unique the
 | `note` | TEXT | Ghi chú |
 | `created_at` | TIMESTAMP | Ngày tạo phiếu |
 
+**Quan hệ:**
+- Nhiều `payslips` thuộc một `employees` qua `employee_id` (N:1)
+
 ---
 
 #### Bảng `salary_components` – Cấu phần lương
@@ -658,6 +735,9 @@ Danh mục các khoản cộng/trừ vào lương (dùng làm key trong cột `d
 | `type` | ENUM (EARNING, DEDUCTION) | Khoản cộng (+) hay trừ (-) |
 | `isSystem` | BOOLEAN | True = hệ thống tự tính, False = nhập tay |
 
+**Quan hệ:**
+- `salary_components` hiện là bảng danh mục độc lập, được tham chiếu logic trong `payslips.details` (không có FK trực tiếp)
+
 ---
 
 #### Bảng `holidays` – Ngày lễ / Nghỉ lễ
@@ -670,6 +750,9 @@ Danh sách ngày nghỉ lễ trong năm dùng để tính công chuẩn và ki�
 | `date` | DATE | Ngày nghỉ lễ |
 | `name` | VARCHAR | Tên ngày lễ (VD: Tết Nguyên Đán, Quốc Khánh) |
 | `description` | TEXT | Mô tả thêm |
+
+**Quan hệ:**
+- `holidays` hiện là bảng danh mục độc lập phục vụ tính công/phép (không có FK trực tiếp)
 
 ---
 
@@ -696,6 +779,11 @@ Danh sách ngày nghỉ lễ trong năm dùng để tính công chuẩn và ki�
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Nhiều `products` thuộc một `categories` qua `category_id` (N:1)
+- Nhiều `products` thuộc một `brands` qua `brand_id` (N:1)
+- Một `products` có nhiều `product_serials`, `product_stocks`, `stock_histories`, `order_details`, `return_items`, `import_details` (1:N)
+
 ---
 
 #### Bảng `brands` – Thương hiệu
@@ -707,6 +795,9 @@ Danh sách ngày nghỉ lễ trong năm dùng để tính công chuẩn và ki�
 | `is_active` | BOOLEAN | Đang hoạt động |
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
+
+**Quan hệ:**
+- Một `brands` có nhiều `products` (1:N)
 
 ---
 
@@ -722,6 +813,11 @@ Hỗ trợ cấu trúc phân cấp (cha – con) nhờ `parent_id` tự tham chi
 | `is_active` | BOOLEAN | Đang hoạt động |
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
+
+**Quan hệ:**
+- Một `categories` có thể thuộc một `categories` cha qua `parent_id` (N:1, self-reference, nullable)
+- Một `categories` có nhiều `categories` con (1:N)
+- Một `categories` có nhiều `products` (1:N)
 
 ---
 
@@ -743,6 +839,10 @@ Hỗ trợ cấu trúc phân cấp (cha – con) nhờ `parent_id` tự tham chi
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Nhiều `warehouses` có thể do một `employees` quản lý qua `manager_id` (N:1, nullable)
+- Một `warehouses` có nhiều `product_serials`, `product_stocks`, `stock_histories`, `import_receipts`, `return_requests` (1:N)
+
 ---
 
 #### Bảng `suppliers` – Nhà cung cấp
@@ -756,6 +856,9 @@ Hỗ trợ cấu trúc phân cấp (cha – con) nhờ `parent_id` tự tham chi
 | `is_active` | BOOLEAN | Đang hợp tác |
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
+
+**Quan hệ:**
+- Một `suppliers` có nhiều `import_receipts` (1:N)
 
 ---
 
@@ -777,6 +880,12 @@ Mỗi phiếu đại diện cho một lần nhập hàng từ nhà cung cấp v�
 | `created_at` | TIMESTAMP | Ngày tạo |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Nhiều `import_receipts` thuộc một `warehouses` qua `warehouse_id` (N:1)
+- Nhiều `import_receipts` có thể thuộc một `suppliers` qua `supplier_id` (N:1, nullable)
+- Nhiều `import_receipts` được tạo bởi một `users` qua `created_by` (N:1)
+- Một `import_receipts` có nhiều `import_details` và có thể liên kết nhiều `product_serials` qua `import_receipt_id` (1:N)
+
 ---
 
 #### Bảng `import_details` – Chi tiết phiếu nhập
@@ -792,6 +901,10 @@ Mỗi dòng là một sản phẩm trong phiếu nhập.
 | `unitPrice` | DECIMAL(15,2) | Giá nhập (cost price) |
 | `amount` | DECIMAL(15,2) | Thành tiền = quantity × unitPrice |
 | `scannedSerials` | JSONB | Danh sách Serial vừa quét; sẽ đẩy sang `product_serials` khi COMPLETED |
+
+**Quan hệ:**
+- Nhiều `import_details` thuộc một `import_receipts` qua `receipt_id` (N:1)
+- Nhiều `import_details` thuộc một `products` qua `product_id` (N:1)
 
 ---
 
@@ -810,6 +923,12 @@ Quản lý từng máy/thiết bị cụ thể theo số serial. Chỉ áp dụn
 | `created_at` | TIMESTAMP | Ngày nhập kho |
 | `updated_at` | TIMESTAMP | Ngày cập nhật trạng thái |
 
+**Quan hệ:**
+- Nhiều `product_serials` thuộc một `products` qua `product_id` (N:1)
+- Nhiều `product_serials` thuộc một `warehouses` qua `warehouse_id` (N:1)
+- Nhiều `product_serials` có thể liên kết một `import_receipts` qua `import_receipt_id` (N:1, nullable)
+- Nhiều `product_serials` có thể liên kết một `orders` qua `order_id` (N:1, nullable)
+
 ---
 
 #### Bảng `product_stocks` – Tồn kho theo kho
@@ -824,6 +943,10 @@ Mỗi dòng = một sản phẩm tại một kho cụ thể. Unique theo `(produ
 | `quantity` | INT | Số lượng tồn hiện tại |
 | `minStockLevel` | INT | Mức tồn tối thiểu (cảnh báo khi xuống dưới mức này) |
 | `lastUpdated` | TIMESTAMP | Thời điểm cập nhật gần nhất |
+
+**Quan hệ:**
+- Nhiều `product_stocks` thuộc một `products` qua `product_id` (N:1)
+- Nhiều `product_stocks` thuộc một `warehouses` qua `warehouse_id` (N:1)
 
 ---
 
@@ -843,6 +966,11 @@ Log mọi sự kiện nhập/xuất/điều chỉnh tồn kho.
 | `reason` | VARCHAR | Lý do thay đổi |
 | `performer_id` | UUID (FK → users, nullable) | Nhân viên thực hiện |
 | `created_at` | TIMESTAMP | Thời điểm xảy ra |
+
+**Quan hệ:**
+- Nhiều `stock_histories` thuộc một `products` qua `product_id` (N:1)
+- Nhiều `stock_histories` thuộc một `warehouses` qua `warehouse_id` (N:1)
+- Nhiều `stock_histories` có thể được tạo bởi một `users` qua `performer_id` (N:1, nullable)
 
 ---
 
@@ -867,6 +995,10 @@ Log mọi sự kiện nhập/xuất/điều chỉnh tồn kho.
 | `createdAt` | TIMESTAMP | Ngày tạo |
 | `updatedAt` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Một `customers` có nhiều `orders` (1:N)
+- Một `customers` có nhiều `return_requests` (1:N)
+
 ---
 
 #### Bảng `orders` – Đơn hàng
@@ -887,6 +1019,13 @@ Log mọi sự kiện nhập/xuất/điều chỉnh tồn kho.
 | `created_at` | TIMESTAMP | Ngày đặt hàng |
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 
+**Quan hệ:**
+- Nhiều `orders` thuộc một `customers` qua `customer_id` (N:1)
+- Nhiều `orders` được tạo bởi một `users` qua `creator_id` (N:1)
+- Một `orders` có nhiều `order_details` (1:N)
+- Một `orders` có thể có nhiều `product_serials` liên kết qua `order_id` (1:N)
+- Một `orders` có thể phát sinh nhiều `return_requests` (1:N)
+
 ---
 
 #### Bảng `order_details` – Chi tiết đơn hàng
@@ -902,6 +1041,10 @@ Mỗi dòng là một sản phẩm trong đơn hàng.
 | `unit_price` | DECIMAL(15,2) | Đơn giá tại thời điểm bán |
 | `amount` | DECIMAL(15,2) | Thành tiền = quantity × unit_price |
 | `assignedSerials` | JSONB | Mảng mã Serial cụ thể đã xuất cho đơn này |
+
+**Quan hệ:**
+- Nhiều `order_details` thuộc một `orders` qua `order_id` (N:1)
+- Nhiều `order_details` thuộc một `products` qua `product_id` (N:1)
 
 ---
 
@@ -920,6 +1063,13 @@ Mỗi dòng là một sản phẩm trong đơn hàng.
 | `reason` | VARCHAR | Lý do trả (VD: "Màn hình bị điểm chết") |
 | `createdAt` | TIMESTAMP | Ngày tiếp nhận |
 
+**Quan hệ:**
+- Nhiều `return_requests` thuộc một `orders` qua `order_id` (N:1)
+- Nhiều `return_requests` thuộc một `customers` qua `customer_id` (N:1)
+- Nhiều `return_requests` thuộc một `warehouses` qua `warehouse_id` (N:1)
+- Nhiều `return_requests` được tạo bởi một `users` qua `creator_id` (N:1)
+- Một `return_requests` có nhiều `return_items` (1:N)
+
 ---
 
 #### Bảng `return_items` – Chi tiết sản phẩm trả
@@ -934,6 +1084,10 @@ Mỗi dòng là một sản phẩm trong yêu cầu trả hàng.
 | `quantity` | INT | Số lượng trả |
 | `refundPrice` | DECIMAL(15,2) | Tiền hoàn lại cho sản phẩm này |
 | `returnedSerials` | JSONB | Mảng các mã Serial cụ thể khách mang trả |
+
+**Quan hệ:**
+- Nhiều `return_items` thuộc một `return_requests` qua `return_request_id` (N:1)
+- Nhiều `return_items` thuộc một `products` qua `product_id` (N:1)
 
 ---
 
@@ -962,6 +1116,10 @@ Quản lý tập trung tất cả file upload (ảnh sản phẩm, CV nhân viê
 | `updated_at` | TIMESTAMP | Ngày cập nhật |
 | `deleted_at` | TIMESTAMP | Ngày xóa mềm |
 
+**Quan hệ:**
+- Nhiều `attachments` có thể được upload bởi một `users` qua `uploaded_by` (N:1, nullable)
+- `attachments` liên kết đa hình tới các bảng nghiệp vụ qua cặp `entity_type` + `entity_id` (không có FK cứng)
+
 ---
 
 #### Bảng `system_settings` – Cài đặt hệ thống
@@ -975,6 +1133,9 @@ Lưu các tham số cấu hình toàn cục dạng key-value.
 | `description` | VARCHAR | Mô tả ý nghĩa của cài đặt |
 | `isActive` | BOOLEAN | Cài đặt này có đang áp dụng không |
 
+**Quan hệ:**
+- `system_settings` là bảng cấu hình độc lập, không có quan hệ FK trực tiếp với bảng khác
+
 ---
 
 ## Tóm tắt số lượng bảng
@@ -982,10 +1143,10 @@ Lưu các tham số cấu hình toàn cục dạng key-value.
 | Nhóm | Số bảng |
 |------|---------|
 | Auth & Phân quyền | 4 (users, roles, permissions, role_permissions) |
-| Quản lý nhân sự HR | 9 (employees, departments, positions, job_histories, leave_requests, resignation_requests, payslips, salary_components, holidays) |
+| Quản lý nhân sự HR | 10 (employees, departments, positions, job_histories, leave_requests, resignation_requests, termination_requests, payslips, salary_components, holidays) |
 | Sản phẩm | 3 (products, brands, categories) |
 | Kho & Nhập hàng | 6 (warehouses, suppliers, import_receipts, import_details, product_serials, product_stocks) |
 | Lịch sử kho | 1 (stock_histories) |
 | Bán hàng | 5 (customers, orders, order_details, return_requests, return_items) |
 | Hệ thống | 2 (attachments, system_settings) |
-| **Tổng** | **30** |
+| **Tổng** | **31** |
