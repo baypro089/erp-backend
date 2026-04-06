@@ -9,6 +9,7 @@ export interface ISalesDashboard {
 
   // 2. Bảng xếp hạng Nhân viên Sale (KPI)
   topStaffs: Array<{
+    rank: number;
     staffName: string;
     totalOrders: number;
     totalRevenue: number;

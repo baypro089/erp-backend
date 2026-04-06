@@ -35,11 +35,11 @@ export class ProductSerial {
 
   // Đến phiếu nhập nào (nếu có)
   @Column({ type: 'uuid', name: 'import_receipt_id', nullable: true })
-  importReceiptId: string;
+  importReceiptId: string | null;
 
   // Đã bán cho đơn hàng nào (nếu có)
   @Column({ type: 'uuid', name: 'order_id', nullable: true })
-  orderId: string;
+  orderId: string | null;
 
   // Ngày nhập kho
   @CreateDateColumn({ name: 'created_at' })

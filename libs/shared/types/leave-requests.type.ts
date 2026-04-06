@@ -29,6 +29,11 @@ export type LeaveRequestCreateDto = {
   autoSplitIfInsufficient?: boolean;
 }
 
+export type CreateLeaveRequestPayload = {
+  data: LeaveRequestCreateDto;
+  documentFile?: any;
+}
+
 export type CalculateWorkingDaysDto = {
   startDate: string; // ISO date string
   endDate: string;   // ISO date string

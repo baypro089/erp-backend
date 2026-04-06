@@ -69,29 +69,3 @@ export type UpdateAttachmentDto = {
   entityType?: string;
   entityId?: string;
 };
-
-// ===============================================
-// Internal interfaces (không export cho frontend)
-// ===============================================
-
-/**
- * Interface cho storage provider
- */
-export interface IStorageProvider {
-  upload(file: Express.Multer.File, folder: AttachmentFolder): Promise<IUploadResult>;
-  read(filePath: string): Promise<Buffer>;
-  delete(filePath: string): Promise<void>;
-  getPublicUrl(filePath: string): string;
-}
-
-/**
- * Kết quả sau khi upload
- */
-export interface IUploadResult {
-  path: string;
-  originalName: string;
-  size: number;
-  mimeType: string;
-  type: AttachmentType;
-  publicUrl?: string;
-}

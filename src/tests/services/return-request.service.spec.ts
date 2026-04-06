@@ -45,10 +45,14 @@ function buildManager() {
         save: jest.fn().mockImplementation((e) => Promise.resolve({ ...e, id: e.id || 'saved' })),
         update: jest.fn().mockResolvedValue(undefined),
         createQueryBuilder: jest.fn().mockReturnValue({
+            innerJoin: jest.fn().mockReturnThis(),
+            addSelect: jest.fn().mockReturnThis(),
             where: jest.fn().mockReturnThis(),
             andWhere: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
             select: jest.fn().mockReturnThis(),
             getRawOne: jest.fn().mockResolvedValue({ total: 5 }),
+            getRawMany: jest.fn().mockResolvedValue([]),
             getMany: jest.fn().mockResolvedValue([]),
         }),
     };

@@ -10,7 +10,8 @@ import { v4 as uuid } from 'uuid';
 import {
   IStorageProvider,
   IUploadResult,
-} from '@libs/shared/types/attachment.type';
+  StorageUploadFile,
+} from '@/interfaces/storage-provider.interface';
 import { AttachmentFolder, AttachmentType } from '@libs/shared/enums/attachment.enum';
 
 /**
@@ -85,7 +86,7 @@ export class LocalStorageProvider implements IStorageProvider {
    * Upload file lên local storage
    */
   async upload(
-    file: Express.Multer.File,
+    file: StorageUploadFile,
     folder: AttachmentFolder,
   ): Promise<IUploadResult> {
     try {
@@ -121,7 +122,7 @@ export class LocalStorageProvider implements IStorageProvider {
         throw error;
       }
       throw new InternalServerErrorException(
-        `Upload file failed: ${error.message}`,
+        `Upload file failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -140,7 +141,7 @@ export class LocalStorageProvider implements IStorageProvider {
       return await fs.promises.readFile(fullPath);
     } catch (error) {
       throw new InternalServerErrorException(
-        `Read file failed: ${error.message}`,
+        `Read file failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -159,7 +160,7 @@ export class LocalStorageProvider implements IStorageProvider {
       await fs.promises.unlink(fullPath);
     } catch (error) {
       throw new InternalServerErrorException(
-        `Delete file failed: ${error.message}`,
+        `Delete file failed: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -176,7 +177,7 @@ export class LocalStorageProvider implements IStorageProvider {
   /**
    * Validate file
    */
-  private validateFile(file: Express.Multer.File): void {
+  private validateFile(file: StorageUploadFile): void {
     // Kiểm tra file có tồn tại không
     if (!file || !file.buffer) {
       throw new BadRequestException('File is required');

@@ -11,4 +11,11 @@ export type ProductStockResponse = {
     warehouse: WarehouseResponse; // Tên kho để hiển thị
 };
 
+export type StockAdjustmentDTO = {
+    warehouseId: string;
+    productId: string;
+    delta: number;
+    reason: string;
+};
+
 export type ProductStockFilteredAndPaged = PagedResult<ProductStockResponse>;

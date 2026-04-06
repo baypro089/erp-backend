@@ -49,6 +49,29 @@ export class ReturnService {
             let totalRefund = 0;
             const returnItems: ReturnItem[] = [];
 
+            const requestedQtyByProduct = new Map<string, number>();
+            for (const item of dto.items) {
+                const prev = requestedQtyByProduct.get(item.productId) || 0;
+                requestedQtyByProduct.set(item.productId, prev + item.quantity);
+            }
+
+            const returnedRows = await manager.createQueryBuilder(ReturnItem, 'ri')
+                .innerJoin(ReturnRequest, 'rr', 'rr.id = ri.return_request_id')
+                .select('ri.product_id', 'productId')
+                .addSelect('COALESCE(SUM(ri.quantity), 0)', 'returnedQty')
+                .where('rr.order_id = :orderId', { orderId: order.id })
+                .groupBy('ri.product_id')
+                .getRawMany();
+
+            const returnedQtyByProduct = new Map<string, number>(
+                returnedRows.map((row: { productId: string; returnedQty: string }) => [
+                    row.productId,
+                    Number(row.returnedQty) || 0,
+                ])
+            );
+
+            const seenReturnedSerials = new Set<string>();
+
             // 3. Xử lý từng món hàng bị trả lại
             for (const itemDto of dto.items) {
                 const product = await manager.findOne(Product, { where: { id: itemDto.productId } });
@@ -68,10 +91,24 @@ export class ReturnService {
                         throw new BadRequestException(`Vui lòng quét đủ ${itemDto.quantity} mã Serial để trả hàng.`);
                     }
 
+                    const uniqueReturnedSerials = new Set(itemDto.returnedSerials);
+                    if (uniqueReturnedSerials.size !== itemDto.returnedSerials.length) {
+                        throw new BadRequestException('Danh sách Serial trả hàng đang bị trùng lặp');
+                    }
+
+                    for (const serial of itemDto.returnedSerials) {
+                        if (seenReturnedSerials.has(serial)) {
+                            throw new BadRequestException('Không thể trả trùng cùng một mã Serial trong một phiếu');
+                        }
+                        seenReturnedSerials.add(serial);
+                    }
+
                     // Query DB xem những Serial này có đúng là của Đơn hàng này không?
                     const serialsInDb = await manager.createQueryBuilder(ProductSerial, 'ps')
                         .where('ps.serialNumber IN (:...sns)', { sns: itemDto.returnedSerials })
+                        .andWhere('ps.product_id = :pId', { pId: product.id })
                         .andWhere('ps.order_id = :oId', { oId: order.id }) // Điều kiện sống còn: Phải mua ở đơn này
+                        .andWhere('ps.status = :status', { status: SerialStatus.SOLD })
                         .getMany();
 
                     if (serialsInDb.length !== itemDto.returnedSerials.length) {
@@ -88,10 +125,14 @@ export class ReturnService {
                     }
                 }
                 else {
-                    // Ràng buộc quan trọng nhất: Số lượng khách trả KHÔNG ĐƯỢC LỚN HƠN số lượng khách đã mua
-                    if (itemDto.quantity > orderItem.quantity) {
+                    // Ràng buộc quan trọng: Tổng trả (lũy kế + request hiện tại) không vượt số lượng đã mua
+                    const alreadyReturned = returnedQtyByProduct.get(product.id) || 0;
+                    const requestedInThisRequest = requestedQtyByProduct.get(product.id) || 0;
+                    const maxReturnable = orderItem.quantity;
+
+                    if (alreadyReturned + requestedInThisRequest > maxReturnable) {
                         throw new BadRequestException(
-                            `Khách hàng chỉ mua ${orderItem.quantity} sản phẩm ${product.name}, không thể trả ${itemDto.quantity}!`
+                            `Sản phẩm ${product.name} đã mua ${maxReturnable}, đã trả ${alreadyReturned}, đang yêu cầu trả thêm ${requestedInThisRequest}. Không thể vượt quá số lượng đã mua.`
                         );
                     }
 

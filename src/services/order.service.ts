@@ -125,6 +125,19 @@ export class OrderService {
                 );
             }
 
+            const requestedOrderItemIds = dto.items.map(item => item.orderItemId);
+            const uniqueOrderItemIds = new Set(requestedOrderItemIds);
+            if (uniqueOrderItemIds.size !== requestedOrderItemIds.length) {
+                throw new BadRequestException('Duplicate orderItemId detected in fulfillment payload');
+            }
+
+            const missingItems = order.items.filter(item => !uniqueOrderItemIds.has(item.id));
+            if (missingItems.length > 0) {
+                throw new BadRequestException(
+                    `Fulfillment payload is incomplete. Missing ${missingItems.length} order item(s)`
+                );
+            }
+
             for (const fulfillItem of dto.items) {
                 const orderItem = order.items.find(i => i.id === fulfillItem.orderItemId);
                 if (!orderItem) {
@@ -141,9 +154,17 @@ export class OrderService {
                         );
                     }
 
+                    const uniqueScannedSerials = new Set(fulfillItem.scannedSerials);
+                    if (uniqueScannedSerials.size !== fulfillItem.scannedSerials.length) {
+                        throw new BadRequestException(
+                            `Duplicate serial numbers detected for product "${orderItem.product.name}"`
+                        );
+                    }
+
                     // Kiểm tra xem Serial có nằm trong kho này và trạng thái AVAILABLE không?
                     const serialsInDb = await manager.createQueryBuilder(ProductSerial, 'ps')
                         .where('ps.serialNumber IN (:...sns)', { sns: fulfillItem.scannedSerials })
+                        .andWhere('ps.product_id = :pId', { pId: orderItem.product.id })
                         .andWhere('ps.warehouse_id = :wId', { wId: dto.warehouseId })
                         .andWhere('ps.status = :status', { status: SerialStatus.AVAILABLE })
                         .getMany();
@@ -231,13 +252,15 @@ export class OrderService {
             if (order.status === OrderStatus.CANCELLED) throw new BadRequestException('Đơn hàng đã được hủy trước đó');
             if (order.status === OrderStatus.DELIVERED) throw new BadRequestException('Đơn hàng đã giao thành công, vui lòng dùng quy trình Trả Hàng (RMA)');
 
+            const currentStatus = order.status;
+
             // 2. KỊCH BẢN 1: Chưa xuất kho (PENDING) -> Hủy đơn (CANCELLED)
-            if (order.status === OrderStatus.PENDING && status === OrderStatus.CANCELLED) {
+            if (currentStatus === OrderStatus.PENDING && status === OrderStatus.CANCELLED) {
                 order.status = status;
             }
 
             // 3. KỊCH BẢN 2: Đã xuất kho (SHIPPED) -> Giao hàng (DELIVERED)
-            if (order.status === OrderStatus.SHIPPED && status === OrderStatus.DELIVERED) {
+            else if (currentStatus === OrderStatus.SHIPPED && status === OrderStatus.DELIVERED) {
                 order.status = status;
                 const currentSpent = Number(order.customer.totalSpent) || 0;
                 order.customer.totalSpent = currentSpent + Number(order.totalAmount);
@@ -246,7 +269,7 @@ export class OrderService {
 
             // 4. KỊCH BẢN 3: Đã xuất kho (SHIPPED / PROCESSING) -> Hủy đơn (CANCELLED) => Hoàn trả hàng về kho + hoàn tác chi tiêu của khách
             // Bắt buộc phải có warehouseId để biết hàng hoàn về kho nào
-            if ((order.status === OrderStatus.SHIPPED || order.status === OrderStatus.PROCESSING) && status === OrderStatus.CANCELLED) {
+            else if ((currentStatus === OrderStatus.SHIPPED || currentStatus === OrderStatus.PROCESSING) && status === OrderStatus.CANCELLED) {
                 if (!warehouseIdToReturn) {
                     throw new BadRequestException('Vui lòng chọn Kho để nhận lại hàng hoàn về!');
                 }
@@ -265,12 +288,20 @@ export class OrderService {
                     if (item.product.hasSerialNumber && item.assignedSerials?.length > 0) {
                         const serials = await manager.createQueryBuilder(ProductSerial, 'ps')
                             .where('ps.serialNumber IN (:...sns)', { sns: item.assignedSerials })
+                            .andWhere('ps.product_id = :productId', { productId: item.product.id })
+                            .andWhere('ps.status = :status', { status: SerialStatus.SOLD })
                             .getMany();
+
+                        if (serials.length !== item.assignedSerials.length) {
+                            throw new BadRequestException(
+                                `Cannot restore serials for product "${item.product.name}" because some serials are not in SOLD status`
+                            );
+                        }
 
                         for (const serial of serials) {
                             serial.status = SerialStatus.AVAILABLE; // Sẵn sàng bán lại
                             serial.warehouse = warehouse; // Đẩy về kho nhận
-                            // serial.orderId = null; // Tùy nghiệp vụ: Xóa đi hoặc giữ lại để biết lịch sử
+                            serial.orderId = null;
                             await manager.save(serial);
                         }
                     }
@@ -309,16 +340,12 @@ export class OrderService {
                     await manager.save(history);
                 }
 
-                // D. Hoàn tác chi tiêu của Khách hàng (đảm bảo không âm)
-                if (order.customer) {
-                    const currentSpent = Number(order.customer.totalSpent) || 0;
-                    const refundAmount = Number(order.totalAmount);
-                    order.customer.totalSpent = Math.max(0, currentSpent - refundAmount);
-                    await manager.save(order.customer);
-                }
-
-                // E. Chốt trạng thái
+                // D. Chốt trạng thái
                 order.status = status;
+            }
+
+            else {
+                throw new BadRequestException(`Invalid status transition from ${currentStatus} to ${status}`);
             }
 
             const savedOrder = await manager.save(order);
