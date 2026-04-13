@@ -10,14 +10,21 @@ Thư mục này chứa các file seed để khởi tạo dữ liệu mẫu cho h
 Tạo các thành phần lương cơ bản:
 - **LUNCH**: Phụ cấp ăn trưa (Earning)
 - **TRANSPORT**: Phụ cấp đi lại (Earning)
+- **BONUS**: Thưởng cố định (Earning)
 - **BHXH**: Bảo hiểm xã hội (Deduction)
-- **TAX**: Thuế TNCN (Deduction)
+- **BHYT**: Bảo hiểm y tế (Deduction)
+- **BHTN**: Bảo hiểm thất nghiệp (Deduction)
+- **PIT**: Thuế TNCN (Deduction)
 
 ### 2. System Setting Seed
 Tạo các cấu hình hệ thống:
 - **GLOBAL_LUNCH_AMOUNT**: 730,000 VNĐ
 - **GLOBAL_TRANSPORT_AMOUNT**: 500,000 VNĐ
-- **INSURANCE_RATE**: 0.105 (10.5%)
+- **GLOBAL_BONUS_AMOUNT**: 1,000,000 VNĐ
+- **BASE_SALARY**: 2,340,000 VNĐ
+- **INSURANCE_RATE_PERCENT**: 8 (%)
+- **HEALTH_INSURANCE_RATE_PERCENT**: 1.5 (%)
+- **UNEMPLOYMENT_INSURANCE_RATE_PERCENT**: 1 (%)
 
 ## Cách chạy
 

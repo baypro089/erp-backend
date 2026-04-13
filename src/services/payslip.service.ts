@@ -25,8 +25,10 @@ import { EMPLOYEE_PERMISSIONS } from "@libs/shared/constants/permissions.constan
 import { createHash } from "crypto";
 
 const SETTING_KEYS = {
+    // Khớp với code trong bảng SystemSetting
     LUNCH: 'GLOBAL_LUNCH_AMOUNT',
     TRANSPORT: 'GLOBAL_TRANSPORT_AMOUNT',
+    BONUS: 'GLOBAL_BONUS_AMOUNT',
     BASE_SALARY: 'BASE_SALARY',
     BHXH_RATE: 'INSURANCE_RATE_PERCENT',
     BHYT_RATE: 'HEALTH_INSURANCE_RATE_PERCENT',
@@ -34,8 +36,10 @@ const SETTING_KEYS = {
 };
 
 const COMPONENT_KEYS = {
-    LUNCH: 'LUNCH',          // Khớp với code trong bảng SalaryComponent
-    TRANSPORT: 'TRANSPORT',  // Khớp với code trong bảng SalaryComponent
+    // Khớp với code trong bảng SalaryComponent
+    LUNCH: 'LUNCH',          
+    TRANSPORT: 'TRANSPORT',
+    BONUS: 'BONUS',
     BHXH: 'BHXH',
     BHYT: 'BHYT',
     BHTN: 'BHTN',
@@ -216,6 +220,9 @@ export class PayslipService {
             const fullTransportAmount = settingMap.get(SETTING_KEYS.TRANSPORT) || 0;
             const transportAmount = fullTransportAmount * allowanceRatio;
 
+            // Cộng thêm khoản thưởng cố định (nếu có) - KHÔNG TỶ LỆ HÓA
+            const bonusAmount = settingMap.get(SETTING_KEYS.BONUS) || 0;
+
             // Trần lương thực tế để tính BHXH, BHYT, BHTN
             // Lương đóng BH = lương cơ bản + phụ cấp CỐ ĐỊNH theo hợp đồng (không tỷ lệ hóa)
             // Nhưng bị giới hạn tối đa = 20 × lương cơ sở
@@ -259,11 +266,12 @@ export class PayslipService {
                 [COMPONENT_KEYS.BHXH]: Math.round(bhxhAmount * 100) / 100,
                 [COMPONENT_KEYS.BHYT]: Math.round(bhytAmount * 100) / 100,
                 [COMPONENT_KEYS.BHTN]: Math.round(bhtnAmount * 100) / 100,
+                [COMPONENT_KEYS.BONUS]: Math.round(bonusAmount * 100) / 100,
                 annualLeaveSettlement: Math.round(annualLeaveSettlement * 100) / 100
             };
 
             // Tính tổng phụ cấp và trừ các khoản bảo hiểm NLĐ phải đóng (BHXH 8% + BHYT 1.5% + BHTN 1%)
-            const allowance = lunchAmount + transportAmount;
+            const allowance = lunchAmount + transportAmount + bonusAmount;
             const deduction = bhxhAmount + bhytAmount + bhtnAmount;
             //finalSalary = finalSalary + allowance - deduction;
 

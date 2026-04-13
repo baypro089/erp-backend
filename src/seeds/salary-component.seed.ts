@@ -25,6 +25,12 @@ export class SalaryComponentSeeder {
         isSystem: false,
       },
       {
+        code: 'BONUS',
+        name: 'Thưởng',
+        type: 'EARNING',
+        isSystem: false,
+      },
+      {
         code: 'BHXH',
         name: 'Bảo hiểm xã hội',
         type: 'DEDUCTION',
