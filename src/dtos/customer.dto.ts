@@ -1,5 +1,6 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, Length } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, Length } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
+import { CustomerTier } from '@libs/shared/enums/customer-tier.enum';
 
 export class CreateCustomerDTO {
   @IsNotEmpty({ message: 'Tên khách hàng không được để trống' })
@@ -27,4 +28,10 @@ export class CreateCustomerDTO {
 
 export class UpdateCustomerDTO extends PartialType(CreateCustomerDTO) {
   // Update DTO kế thừa toàn bộ thuộc tính của Create (thành optional)
+  @IsOptional()
+  @IsEnum(CustomerTier, { message: 'Hạng khách hàng không hợp lệ' })
+  tier?: CustomerTier; // Có thể cập nhật hạng khách hàng
+  @IsOptional()
+  @IsBoolean({ message: 'Trạng thái hoạt động không hợp lệ' })
+  isActive?: boolean; // Có thể cập nhật trạng thái hoạt động
 }

@@ -47,7 +47,7 @@ export class ImportReceiptMapper {
             totalPrice: entity.totalPrice,
             status: entity.status,
             createdAt: entity.createdAt,
-            itemsCount: entity.items?.length || 0,
+            itemsCount: entity.itemsCount ?? entity.items?.length ?? 0,
         };
     }
 

@@ -18,6 +18,7 @@ import { FileService } from "./file.service";
 import dayjs from 'dayjs';
 
 const MATERNITY_DAYS = 180;
+const DEFAULT_ANNUAL_LEAVE_DAYS = 12;
 
 @Injectable()
 export class LeaveRequestService {
@@ -426,7 +427,19 @@ export class LeaveRequestService {
         await this.redisService.delByPrefix(`employees:`);
     }
 
-    // Quyết toán BHXH cho đơn thai sản
+    async resetAnnualLeaveBalances(): Promise<void> {
+        await this.dataSource.transaction(async (manager) => {
+            await manager.getRepository(Employee)
+                .createQueryBuilder()
+                .update(Employee)
+                .set({ totalAnnualLeave: DEFAULT_ANNUAL_LEAVE_DAYS, usedAnnualLeave: 0 })
+                .execute();
+        });
+
+        await this.redisService.delByPrefix(`employees:`);
+    }
+
+    // Quyết toán BHXH cho đơn thai sản và đơn ốm đau
     async claimBhxh(leaveRequestId: string): Promise<LeaveRequest> {
         const leaveRepo = this.dataSource.getRepository(LeaveRequest);
         const leaveRequest = await leaveRepo.findOne({ where: { id: leaveRequestId }, relations: ['employee'] });
@@ -434,8 +447,8 @@ export class LeaveRequestService {
         if (!leaveRequest) {
             throw new BadRequestException('Leave request does not exist');
         }
-        if (leaveRequest.type !== LeaveRequestType.MATERNITY) {
-            throw new BadRequestException('Chỉ đơn thai sản mới có thể quyết toán BHXH');
+        if (leaveRequest.type !== LeaveRequestType.MATERNITY && leaveRequest.type !== LeaveRequestType.SICK) {
+            throw new BadRequestException('Chỉ đơn thai sản hoặc đơn ốm đau mới có thể quyết toán BHXH');
         }
         if (leaveRequest.status !== LeaveRequestStatus.APPROVED) {
             throw new BadRequestException('Chỉ đơn đã được duyệt mới có thể quyết toán BHXH');

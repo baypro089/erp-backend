@@ -23,7 +23,8 @@ export class ImportReceiptRepository extends Repository<ImportReceipt> {
         const query = this.createQueryBuilder('receipt')
             .leftJoinAndSelect('receipt.warehouse', 'warehouse')
             .leftJoinAndSelect('receipt.supplier', 'supplier')
-            .leftJoinAndSelect('receipt.createdByUser', 'user');
+            .leftJoinAndSelect('receipt.createdByUser', 'user')
+            .loadRelationCountAndMap('receipt.itemsCount', 'receipt.items');
         if (code) {
             query.andWhere('receipt.code LIKE :code', { code: `%${code}%` });
         }

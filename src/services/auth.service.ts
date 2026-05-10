@@ -32,7 +32,7 @@ export class AuthService {
       );
 
       if (!user || !user.isActive) {
-        throw new UnauthorizedException('Invalid credentials');
+        throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
       }
 
       const isMatch = await bcrypt.compare(
@@ -41,7 +41,7 @@ export class AuthService {
       );
 
       if (!isMatch) {
-        throw new UnauthorizedException('Invalid credentials');
+        throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
       }
 
       const accessToken = this.generateAccessToken(user);
@@ -55,7 +55,7 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Login failed. Please try again');
+      throw new UnauthorizedException('Đăng nhập thất bại. Vui lòng thử lại');
     }
   }
 
@@ -88,7 +88,7 @@ export class AuthService {
       );
 
       if (!user || !user.isActive) {
-        throw new UnauthorizedException('User invalid');
+        throw new UnauthorizedException('Người dùng không hợp lệ');
       }
 
       return this.generateAccessToken(user);

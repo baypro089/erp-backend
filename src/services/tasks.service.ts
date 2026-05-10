@@ -15,4 +15,9 @@ export class TasksService {
         this.resignationRequestService.processDueResignations();
         await this.leaveRequestService.processMaternityLeave();
     }
+
+    @Cron('0 0 1 1 *')
+    async handleAnnualLeaveReset() {
+        await this.leaveRequestService.resetAnnualLeaveBalances();
+    }
 }

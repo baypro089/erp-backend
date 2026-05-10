@@ -69,4 +69,6 @@ export class ImportReceipt {
   @JoinColumn({ name: 'created_by' })
   createdByUser: User;
 
+  itemsCount?: number;
+
 }

@@ -50,7 +50,7 @@ export class EmployeeService {
         }
 
         // Select only employee fields to reduce payload; adjust if callers need relations
-        qb.select(['employee.id', 'employee.fullName', 'employee.employeeCode', 'employee.startDate']);
+        qb.select(['employee.id', 'employee.fullName', 'employee.employeeCode', 'employee.startDate', 'employee.userId']);
 
         const employees = await qb.getMany();
         await this.redisService.set(cacheKey, employees, 300); // Cache for 5 minutes
